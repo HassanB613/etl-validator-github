@@ -1,98 +1,118 @@
+import os
 import subprocess
+from datetime import datetime
 import boto3
 import pandas as pd
-import pyarrow as pa
 import pyarrow.parquet as pq
-import os
+import pyarrow as pa
 import time
-from datetime import datetime
 
-# Configuration Setup
-
-# S3 paths
+# --------------------
+# Configuration
+# --------------------
 BUCKET = "mtfpm-dev-s3-mtfpmstaging-us-east-1"
+GLUE_JOB_NAME = "dm-bank-etl"
 S3_PREFIX = "bankfile/2025/05"
 ARCHIVE_PREFIX = "bankfile/archive/2025/05"
 ERROR_CSV_PREFIX = "bankfile/error/"
 
-# Glue job name
-GLUE_JOB_NAME = "dm-bank-etl"
-
-# Output filenames
-VALID_FILE = "DMBankData_valid.parquet"
-INVALID_FILE = "DMBankData_invalid.parquet"
-
-# AWS clients
 s3 = boto3.client("s3")
-glue = boto3.client("glue")
-rds = boto3.client("rds-data") 
+glue = boto3.client("glue", region_name="us-east-1")
 
-# Step 1: Generate Valid Parquet
-def generate_valid_parquet():
-    print("🔧 Generating valid .parquet file...")
-    subprocess.run(["python", "newaugsver.py", "--rows", "50", "--formats", "parquet", "--output", VALID_FILE], check=True)
+# --------------------
+# Step 1: Generate test files
+# --------------------
+def run_generator_file(is_valid=True):
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_dir = f"./test_output/{'valid' if is_valid else 'invalid'}_{timestamp}"
+    os.makedirs(output_dir, exist_ok=True)
 
+    output_filename = "DMBankData_valid" if is_valid else "DMBankData_invalid"
 
-# Step 2: Inject Invalid Data
-def create_invalid_parquet():
-    print("⚠️ Creating invalid .parquet file...")
-    df = pd.read_parquet(VALID_FILE)
-    df.loc[0, "ContactCode"] = "XX"  # invalid enum
-    df.loc[1, "RoutingTransitNumber"] = "BADTYPE"  # invalid type
-    df.loc[2, "OrganizationTin"] = None  # null where not allowed
-    pq.write_table(pa.Table.from_pandas(df), INVALID_FILE)
-    print("Invalid file created")
+    cmd = [
+        "python",
+        "newaugsver.py",
+        "--rows", "50",
+        "--seed", "100",
+        "--formats", "parquet",
+        "--output-dir", output_dir,
+        "--output", output_filename
+    ]
 
-# Step 3: Upload to S3
-def upload_to_s3(filename):
-    print(f"📤 Uploading {filename} to S3...")
-    s3.upload_file(filename, BUCKET, f"{S3_PREFIX}/{filename}")
+    if not is_valid:
+        cmd += ["--missing-data", "--missing-columns", "OrganizationTin", "ContactEmail"]
 
-# Step 4: Monitor Glue Job
+    print(f"🚀 Running: {' '.join(cmd)}")
+    subprocess.run(cmd, check=True)
+
+    full_path = os.path.join(output_dir, output_filename + ".parquet")
+    return full_path
+
+# --------------------
+# Step 2: Upload to S3
+# --------------------
+def upload_to_s3(file_path):
+    s3_key = f"{S3_PREFIX}/{os.path.basename(file_path)}"
+    print(f"📤 Uploading {file_path} to s3://{BUCKET}/{s3_key}")
+    s3.upload_file(file_path, BUCKET, s3_key)
+    return s3_key
+
+# --------------------
+# Step 3: Trigger & monitor Glue
+# --------------------
 def wait_for_glue_success(job_name, timeout=600):
-    print("🕒 Waiting for Glue job to complete...")
-    start_time = time.time()
-    job_run_id = glue.start_job_run(JobName=job_name)['JobRunId']
+    print("🕒 Starting Glue job...")
+    response = glue.start_job_run(JobName=job_name)
+    run_id = response["JobRunId"]
 
+    start_time = time.time()
     while time.time() - start_time < timeout:
-        run_state = glue.get_job_run(JobName=job_name, RunId=job_run_id)["JobRun"]["JobRunState"]
-        if run_state in ("SUCCEEDED", "FAILED", "STOPPED"):
-            print(f"✅ Glue job finished with status: {run_state}")
-            return run_state == "SUCCEEDED"
+        status = glue.get_job_run(JobName=job_name, RunId=run_id)["JobRun"]["JobRunState"]
+        print(f"⌛ Glue job status: {status}")
+        if status in ["SUCCEEDED", "FAILED", "STOPPED"]:
+            return status == "SUCCEEDED"
         time.sleep(10)
-    
-    print("❌ Timeout waiting for Glue job")
+
+    print("❌ Timeout waiting for Glue job to complete.")
     return False
 
-# Step 5: Validate Outputs
-def check_s3_exists(prefix, keyword):
-    print(f"🔍 Checking S3 for {keyword} under {prefix}...")
+# --------------------
+# Step 4: Validate S3 Outputs
+# --------------------
+def check_s3_file_exists(prefix, keyword):
+    print(f"🔍 Checking S3 prefix {prefix} for file containing '{keyword}'...")
     result = s3.list_objects_v2(Bucket=BUCKET, Prefix=prefix)
     for obj in result.get("Contents", []):
         if keyword in obj["Key"]:
             print(f"✅ Found: {obj['Key']}")
             return True
-    print(f" Not found: {keyword}")
+    print(f"❌ No file found in {prefix} containing '{keyword}'")
     return False
 
-# Main
+# --------------------
+# Main Test Orchestration
+# --------------------
 def main():
-    generate_valid_parquet()
-    create_invalid_parquet()
-    upload_to_s3(VALID_FILE)
-    upload_to_s3(INVALID_FILE)
+    print(">>> Step 1: Generate test files")
+    valid_file = run_generator_file(is_valid=True)
+    invalid_file = run_generator_file(is_valid=False)
 
+    print(">>> Step 2: Upload to S3")
+    upload_to_s3(valid_file)
+    upload_to_s3(invalid_file)
+
+    print(">>> Step 3: Trigger and monitor Glue job")
     if not wait_for_glue_success(GLUE_JOB_NAME):
         print("❌ Glue job failed.")
         return
 
-    time.sleep(20)  # give downstream processes time to complete
+    time.sleep(20)  # buffer time for outputs to land
 
-    # Validate presence of outputs
-    assert check_s3_exists(ERROR_CSV_PREFIX, ".csv"), "Error CSV not found"
-    assert check_s3_exists(ARCHIVE_PREFIX, VALID_FILE), "Archive file not found"
+    print(">>> Step 4: Validate S3 outputs")
+    assert check_s3_file_exists(ERROR_CSV_PREFIX, ".csv"), "❌ Error CSV not found"
+    assert check_s3_file_exists(ARCHIVE_PREFIX, os.path.basename(valid_file)), "❌ Archive file not found"
 
-    print("All validations passed.")
+    print("\n🎉 ALL VALIDATIONS PASSED ✅")
 
 if __name__ == "__main__":
     main()
