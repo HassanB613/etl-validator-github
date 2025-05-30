@@ -1,0 +1,13 @@
+# Python junk
+__pycache__/
+*.pyc
+
+# virtural env
+venv/
+
+# parquet or generated data files 
+*.parquet
+
+# OS system files
+.DS_Store
+Thumbs.db 
