@@ -14,3 +14,6 @@ Thumbs.db
 
 #testrail_config
 testrail_config.ini
+
+#testoutput
+test_output/
