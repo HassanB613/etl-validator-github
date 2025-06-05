@@ -7,6 +7,7 @@ import pyarrow.parquet as pq
 import pyarrow as pa
 import time
 import requests  # Add this for TestRail integration
+import configparser
 
 # --------------------
 # Configuration
@@ -20,15 +21,19 @@ ERROR_CSV_PREFIX = "bankfile/error/"
 s3 = boto3.client("s3")
 glue = boto3.client("glue", region_name="us-east-1")
 
+# Load TestRail configuration
+config = configparser.ConfigParser()
+config.read("testrail_config.ini")
+
+TESTRAIL_URL = config["TestRail"]["url"]
+TESTRAIL_USERNAME = config["TestRail"]["username"]
+TESTRAIL_API_KEY = config["TestRail"]["api_key"]
+TESTRAIL_RUN_ID = int(config["TestRail"]["run_id"])
+TESTRAIL_TEST_ID = int(config["TestRail"]["test_id"])
+
 # --------------------
 # TestRail Configuration
 # --------------------
-TESTRAIL_URL = "https://testrailent.cms.gov/"
-TESTRAIL_USERNAME = ""
-TESTRAIL_API_KEY = ""
-TESTRAIL_RUN_ID = 38269  # Active TestRail run ID
-TESTRAIL_TEST_ID = 17539214  # Replace with your TestRail test ID
-
 def report_to_testrail(test_id, status, comment):
     """
     Report test results to TestRail.

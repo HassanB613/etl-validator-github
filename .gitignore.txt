@@ -11,3 +11,6 @@ venv/
 # OS system files
 .DS_Store
 Thumbs.db 
+
+#testrail_config
+testrail_config.ini
