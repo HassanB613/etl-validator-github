@@ -24,8 +24,8 @@ glue = boto3.client("glue", region_name="us-east-1")
 # TestRail Configuration
 # --------------------
 TESTRAIL_URL = "https://testrailent.cms.gov/"
-TESTRAIL_USERNAME = "BOSF"
-TESTRAIL_API_KEY = "B81s5sde"
+TESTRAIL_USERNAME = ""
+TESTRAIL_API_KEY = ""
 TESTRAIL_RUN_ID = 38269  # Active TestRail run ID
 TESTRAIL_TEST_ID = 17539214  # Replace with your TestRail test ID
 
@@ -86,12 +86,18 @@ def add_case_to_run(run_id, case_id):
 # --------------------
 # Step 1: Generate test files
 # --------------------
-def run_generator_file(is_valid=True):
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+def run_generator_file(is_valid=True, timestamp=None):
+    """
+    Generate test files with the naming convention:
+    mtfdm_dev_dmbankdata_YYYYMMDD_HHMMSS.parquet
+    """
+    # Use the provided timestamp or generate a new one
+    timestamp = timestamp or datetime.now().strftime("%Y%m%d.%H%M%S")
     output_dir = f"./test_output/{'valid' if is_valid else 'invalid'}_{timestamp}"
     os.makedirs(output_dir, exist_ok=True)
 
-    output_filename = "DMBankData_valid" if is_valid else "DMBankData_invalid"
+    # Use the new naming convention in lowercase
+    output_filename = f"mtfdm_dev_dmbankdata_{timestamp}"
 
     cmd = [
         "python",
@@ -100,7 +106,7 @@ def run_generator_file(is_valid=True):
         "--seed", "100",
         "--formats", "parquet",
         "--output-dir", output_dir,
-        "--output", output_filename
+        "--output", output_filename  # No .parquet here
     ]
 
     if not is_valid:
@@ -109,6 +115,7 @@ def run_generator_file(is_valid=True):
     print(f"🚀 Running: {' '.join(cmd)}")
     subprocess.run(cmd, check=True)
 
+    # Add .parquet extension to the full path
     full_path = os.path.join(output_dir, output_filename + ".parquet")
     return full_path
 
@@ -116,6 +123,13 @@ def run_generator_file(is_valid=True):
 # Step 2: Upload to S3
 # --------------------
 def upload_to_s3(file_path):
+    """
+    Upload files to S3 with the new naming convention.
+    """
+    if not os.path.exists(file_path):
+        print(f"❌ File not found: {file_path}")
+        raise FileNotFoundError(f"File not found: {file_path}")
+
     s3_key = f"{S3_PREFIX}/{os.path.basename(file_path)}"
     print(f"📤 Uploading {file_path} to s3://{BUCKET}/{s3_key}")
     s3.upload_file(file_path, BUCKET, s3_key)
@@ -143,6 +157,26 @@ def wait_for_glue_success(job_name, timeout=600):
 # --------------------
 # Step 4: Validate S3 Outputs
 # --------------------
+def check_s3_file_exists(prefix):
+    """
+    Check if a file exists in the S3 bucket with a specific prefix and exact timestamp.
+    The search will match the full file name, including seconds (YYYYMMDD.HHMMSS).
+    """
+    print(f"🔍 Checking S3 prefix {prefix} for the exact file name...")
+    result = s3.list_objects_v2(Bucket=BUCKET, Prefix=prefix)
+    
+    # Use the global RUN_TIMESTAMP
+    expected_filename = f"DMBankErrorfile.{RUN_TIMESTAMP}.csv"
+    
+    for obj in result.get("Contents", []):
+        # Check if the file name matches the expected file name
+        if obj["Key"].endswith(expected_filename):
+            print(f"✅ Found: {obj['Key']}")
+            return True
+    
+    print(f"❌ No file found in {prefix} matching the exact file name ({expected_filename})")
+    return False
+
 def check_s3_file_exists(prefix, keyword):
     print(f"🔍 Checking S3 prefix {prefix} for file containing '{keyword}'...")
     result = s3.list_objects_v2(Bucket=BUCKET, Prefix=prefix)
@@ -153,40 +187,146 @@ def check_s3_file_exists(prefix, keyword):
     print(f"❌ No file found in {prefix} containing '{keyword}'")
     return False
 
+def check_s3_file_exists_with_naming_convention(prefix, timestamp):
+    """
+    Check if a file exists in the S3 bucket with the new naming convention.
+    Naming convention: mtfdm_dev_dmbankdata_YYYYMMDD_HHMMSS.parquet
+    """
+    print(f"🔍 Checking S3 prefix {prefix} for files matching the naming convention...")
+    result = s3.list_objects_v2(Bucket=BUCKET, Prefix=prefix)
+    
+    # Generate the expected filename in lowercase
+    expected_filename = f"mtfdm_dev_dmbankdata_{timestamp}.parquet"
+    
+    for obj in result.get("Contents", []):
+        if obj["Key"].endswith(expected_filename):
+            print(f"✅ Found: {obj['Key']}")
+            return True
+    
+    # Change ❌ to ⭐ for success in Step 5
+    print(f"⭐ No file found in {prefix} matching the naming convention ({expected_filename})")
+    return False
+
 # --------------------
 # Main Test Orchestration
 # --------------------
 def main():
-    print(">>> Step 1: Generate test files")
-    valid_file = run_generator_file(is_valid=True)
-    invalid_file = run_generator_file(is_valid=False)
+    try:
+        # Initialize a dictionary to track step statuses
+        step_status = {
+            "Step 1": "Passed",
+            "Step 2": "Passed",
+            "Step 3": "Passed",
+            "Step 4": "Passed",
+            "Step 5": "Passed",
+            "Step 6": "Passed",
+            "Step 7": "Passed"
+        }
 
-    print(">>> Step 2: Upload to S3")
-    upload_to_s3(valid_file)
-    upload_to_s3(invalid_file)
+        print(">>> Step 1: Generate test files")
+        
+        # Generate valid file with a unique timestamp
+        valid_timestamp = datetime.now().strftime("%Y%m%d.%H%M%S")
+        valid_file = run_generator_file(is_valid=True, timestamp=valid_timestamp)
+        
+        # Add a delay to ensure a unique timestamp for the invalid file
+        time.sleep(5)  # Wait for 5 seconds
+        
+        # Generate invalid file with a new unique timestamp
+        invalid_timestamp = datetime.now().strftime("%Y%m%d.%H%M%S")
+        invalid_file = run_generator_file(is_valid=False, timestamp=invalid_timestamp)
 
-    print(">>> Step 3: Trigger and monitor Glue job")
-    glue_job_success = wait_for_glue_success(GLUE_JOB_NAME)
-    if not glue_job_success:
-        print("❌ Glue job failed.")
-        report_to_testrail(TESTRAIL_TEST_ID, 5, "Glue job failed.")
-        return
+        print(">>> Step 2: Upload to S3")
+        upload_to_s3(valid_file)
+        upload_to_s3(invalid_file)
 
-    time.sleep(20)  # buffer time for outputs to land
+        # Wait for files to propagate in S3
+        time.sleep(5)
 
-    print(">>> Step 4: Validate S3 outputs")
-    error_csv_found = check_s3_file_exists(ERROR_CSV_PREFIX, ".csv")
-    archive_file_found = check_s3_file_exists(ARCHIVE_PREFIX, os.path.basename(valid_file))
+        print(">>> Step 3: Validate S3 outputs before triggering Glue job")
+        valid_file_found = check_s3_file_exists_with_naming_convention(S3_PREFIX, valid_timestamp)
+        invalid_file_found = check_s3_file_exists_with_naming_convention(S3_PREFIX, invalid_timestamp)
 
-    if error_csv_found and archive_file_found:
-        print("\n🎉 ALL VALIDATIONS PASSED ✅")
-        report_to_testrail(TESTRAIL_TEST_ID, 1, "All validations passed.")
-    else:
-        print("\n❌ VALIDATIONS FAILED")
-        failure_reason = (
-            "Error CSV not found" if not error_csv_found else "Archive file not found"
-        )
-        report_to_testrail(TESTRAIL_TEST_ID, 5, f"Validation failed: {failure_reason}")
+        # Assert that both files are present in the ready folder
+        assert valid_file_found, f"❌ Valid file not found in S3: {valid_file}"
+        assert invalid_file_found, f"❌ Invalid file not found in S3: {invalid_file}"
+        print("✅ Both valid and invalid files are present in S3.")
+
+        print(">>> Step 4: Trigger and monitor Glue job")
+        glue_job_success = wait_for_glue_success(GLUE_JOB_NAME)
+        if not glue_job_success:
+            step_status["Step 4"] = "Failed"
+            raise Exception("❌ Glue job failed.")
+        
+        time.sleep(20)  # Buffer time for outputs to land
+
+        print(">>> Step 5: Validate S3 outputs (Ready folder)")
+        try:
+            valid_file_absent = not check_s3_file_exists_with_naming_convention(S3_PREFIX, valid_timestamp)
+            invalid_file_absent = not check_s3_file_exists_with_naming_convention(S3_PREFIX, invalid_timestamp)
+
+            assert valid_file_absent, f"❌ Valid file still found in S3 ready folder: {valid_timestamp}"
+            assert invalid_file_absent, f"❌ Invalid file still found in S3 ready folder: {invalid_timestamp}"
+            print("✅ Both valid and invalid files are no longer in the S3 ready folder.")
+        except AssertionError as e:
+            step_status["Step 5"] = f"Failed: {str(e)}"
+            print(str(e))
+
+        print(">>> Step 6: Validate S3 outputs (Archive folder)")
+        try:
+            current_year = datetime.now().strftime("%Y")
+            current_month = datetime.now().strftime("%m")
+            archive_prefix = f"bankfile/archive/{current_year}/{current_month}"
+
+            valid_file_in_archive = check_s3_file_exists_with_naming_convention(archive_prefix, valid_timestamp)
+            assert valid_file_in_archive, f"❌ Valid file not found in S3 archive folder: {valid_timestamp}"
+            print("✅ Valid file successfully moved to the archive folder.")
+
+            invalid_file_in_archive = check_s3_file_exists_with_naming_convention(archive_prefix, invalid_timestamp)
+            assert invalid_file_in_archive, f"❌ Invalid file not found in S3 archive folder: {invalid_timestamp}"
+            print("✅ Invalid file successfully moved to the archive folder.")
+        except AssertionError as e:
+            step_status["Step 6"] = f"Failed: {str(e)}"
+            print(str(e))
+
+        print(">>> Step 7: Validate S3 outputs (Error folder)")
+        try:
+            expected_error_csv = f"DMBankErrorfile.{invalid_timestamp}.csv"
+            error_csv_found = check_s3_file_exists(ERROR_CSV_PREFIX, expected_error_csv)
+
+            assert error_csv_found, f"❌ Error CSV file not found in S3 error folder: {expected_error_csv}"
+            print(f"✅ Error CSV file successfully found in the error folder: {expected_error_csv}")
+        except AssertionError as e:
+            step_status["Step 7"] = f"Failed: {str(e)}"
+            print(str(e))
+
+        # Debugging output for step statuses
+        print("\nDebugging Step Statuses:")
+        for step, status in step_status.items():
+            print(f"{step}: {status}")
+
+    except AssertionError as e:
+        print(str(e))
+    except Exception as e:
+        print(str(e))
+    finally:
+        # Report overall step statuses to TestRail
+        detailed_comment = "\n".join([f"{step}: {status}" for step, status in step_status.items()])
+
+        # Update failure detection logic
+        overall_status = 5 if any("Failed" in str(status) for status in step_status.values()) else 1
+
+        # Print overall test result in the terminal
+        if overall_status == 5:
+            print("❌ Overall Test Result: Failed")
+        else:
+            print("✅ Overall Test Result: Passed")
+
+        # Report to TestRail
+        report_to_testrail(TESTRAIL_TEST_ID, overall_status, detailed_comment)
+
+# Global timestamp for the current script run
+RUN_TIMESTAMP = datetime.now().strftime("%Y%m%d.%H%M%S")
 
 if __name__ == "__main__":
     main()
