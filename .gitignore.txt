@@ -12,8 +12,9 @@ venv/
 .DS_Store
 Thumbs.db 
 
-# Ignore test output folder and all its contents
-test_output/
+# Ignore all contents of test_output, but not the folder itself
+test_output/*
+!test_output/.gitkeep
 
 #testrail_config
 testrail_config.ini
