@@ -2,18 +2,18 @@
 __pycache__/
 *.pyc
 
-# virtural env
+# virtual env
 venv/
 
-# parquet or generated data files 
+# Parquet or generated data files 
 *.parquet
 
 # OS system files
 .DS_Store
 Thumbs.db 
 
+# Ignore test output folder and all its contents
+test_output/
+
 #testrail_config
 testrail_config.ini
-
-#testoutput
-test_output/
