@@ -1,31 +1,52 @@
 pipeline {
     agent {
-        docker {
-            image 'python:3.9'
+        kubernetes {
+            yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  serviceAccountName: tooling
+  restartPolicy: Never
+  containers:
+  - name: python
+    image: python:3.9
+    command: ["/busybox/cat"]
+    tty: true
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+'''
         }
     }
     stages {
         stage('Build') {
             steps {
-                echo 'Building...'
-                echo 'Installing Python dependencies...'
-                sh 'python3 -m pip install -r requirements.txt'
+                container('python') {
+                    echo 'Building...'
+                    echo 'Installing Python dependencies...'
+                    sh 'python3 -m pip install -r requirements.txt'
+                }
             }
         }
         stage('Test') {
             steps {
-                echo 'Running test_run_1.py...'
-                sh 'python3 tests/test_run_1.py'
-                echo 'Running test_run_2.py...'
-                sh 'python3 tests/test_run_2.py'
-                echo 'Running test_run_3.py...'
-                sh 'python3 tests/test_run_3.py'
+                container('python') {
+                    echo 'Running test_run_1.py...'
+                    sh 'python3 tests/test_run_1.py'
+                    echo 'Running test_run_2.py...'
+                    sh 'python3 tests/test_run_2.py'
+                    echo 'Running test_run_3.py...'
+                    sh 'python3 tests/test_run_3.py'
+                }
             }
         }
         stage('SQL Test') {
             steps {
-                echo 'Running SQL tests...'
-                sh 'python3 tests/run_sql_test.py'
+                container('python') {
+                    echo 'Running SQL tests...'
+                    sh 'python3 tests/run_sql_test.py'
+                }
             }
         }
     }
