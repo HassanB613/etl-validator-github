@@ -3,7 +3,5 @@ faker
 pyarrow
 boto3
 requests
-configparser
 tqdm
-logging
 pyodbc
