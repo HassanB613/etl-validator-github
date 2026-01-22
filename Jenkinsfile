@@ -9,18 +9,17 @@ pipeline {
         stage('Test') {
             steps {
                 echo 'Running test_run_1.py...'
-                bat 'python tests/test_run_1.py'
+                sh 'python3 tests/test_run_1.py'
                 echo 'Running test_run_2.py...'
-                bat 'python tests/test_run_2.py'
+                sh 'python3 tests/test_run_2.py'
                 echo 'Running test_run_3.py...'
-                bat 'python tests/test_run_3.py'
+                sh 'python3 tests/test_run_3.py'
             }
         }
         stage('SQL Test') {
             steps {
                 echo 'Running SQL tests...'
-                // Example: Run SQL scripts (customize as needed)
-                // bat 'sqlcmd -S <server> -d <db> -U <user> -P <password> -i sql/test_script.sql'
+                sh 'python3 tests/run_sql_test.py'
             }
         }
     }
