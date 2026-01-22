@@ -45,7 +45,10 @@ spec:
             steps {
                 container('python') {
                     echo 'Running SQL tests...'
-                    sh 'python3 tests/run_sql_test.py'
+                    sh '''
+                        apt-get update && apt-get install -y unixodbc-dev
+                        python3 tests/run_sql_test.py
+                    '''
                 }
             }
         }
