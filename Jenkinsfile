@@ -5,12 +5,12 @@ pipeline {
 apiVersion: v1
 kind: Pod
 spec:
-  serviceAccountName: tooling
   restartPolicy: Never
   containers:
   - name: python
     image: python:3.9
-    command: ["/busybox/cat"]
+    command: ["/bin/sh", "-c"]
+    args: ["cat"]
     tty: true
     resources:
       limits:
