@@ -25,14 +25,37 @@ try:
         cursor = conn.cursor()
         # Run all .sql files in the sqlUtils folder
         sql_dir = os.path.join(os.path.dirname(__file__), '../sqlUtils')
-        for fname in os.listdir(sql_dir):
-            if fname.endswith('.sql'):
-                with open(os.path.join(sql_dir, fname), 'r') as f:
-                    sql = f.read()
-                    print(f'Running {fname}...')
-                    cursor.execute(sql)
+        sql_files = sorted([f for f in os.listdir(sql_dir) if f.endswith('.sql')])
+        
+        if not sql_files:
+            print('No SQL files found in sqlUtils folder.')
+        
+        for fname in sql_files:
+            with open(os.path.join(sql_dir, fname), 'r') as f:
+                sql = f.read()
+                print(f'\n=== Running {fname} ===')
+                
+                # Execute SQL and fetch results if available
+                cursor.execute(sql)
+                
+                # Try to fetch results if it's a SELECT statement
+                try:
+                    rows = cursor.fetchall()
+                    if rows:
+                        # Print column names
+                        columns = [column[0] for column in cursor.description]
+                        print(f"Columns: {', '.join(columns)}")
+                        # Print rows
+                        for row in rows:
+                            print(row)
+                    else:
+                        print('Query executed successfully (no results returned)')
+                except pyodbc.ProgrammingError:
+                    # Not a SELECT statement or no results
                     conn.commit()
-        print('All SQL scripts executed successfully.')
+                    print('Query executed successfully')
+        
+        print('\n✅ All SQL scripts executed successfully.')
 except Exception as e:
-    print(f'Error: {e}')
+    print(f'❌ Error: {e}')
     exit(1)
