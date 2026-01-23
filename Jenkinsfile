@@ -5,6 +5,7 @@ pipeline {
 apiVersion: v1
 kind: Pod
 spec:
+  serviceAccountName: jenkins-role
   restartPolicy: Never
   containers:
   - name: python
@@ -16,6 +17,10 @@ spec:
       limits:
         cpu: 500m
         memory: 1Gi
+  - name: awscli
+    image: amazon/aws-cli:latest
+    command: ["cat"]
+    tty: true
 '''
         }
     }
