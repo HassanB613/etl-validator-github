@@ -4,6 +4,9 @@ pipeline {
             yaml '''
 apiVersion: v1
 kind: Pod
+metadata:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::448049811908:role/mtf-pm-dev-jenkins-execution-role
 spec:
   serviceAccountName: jenkins-role
   restartPolicy: Never
