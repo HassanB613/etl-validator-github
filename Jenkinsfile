@@ -117,35 +117,28 @@ EOF
         }
         
         stage('Test') {
-            steps {
-                container('python') {
-                    echo 'Running tests with assumed AWS credentials...'
-                    sh '''
-                        # Source AWS credentials for Python tests
-                        if [ -f /tmp/aws-env-vars.sh ]; then
-                            source /tmp/aws-env-vars.sh
-                        fi
-                        
-                        cd tests
-                        python3 test_run_1.py
-                    '''
-                    
-                    echo 'Running test_run_2.py...'
-                    sh '''
-                        source /tmp/aws-env-vars.sh
-                        cd tests
-                        python3 test_run_2.py
-                    '''
-                    
-                    echo 'Running test_run_3.py...'
-                    sh '''
-                        source /tmp/aws-env-vars.sh
-                        cd tests
-                        python3 test_run_3.py
-                    '''
-                }
-            }
+    steps {
+        container('python') {
+            echo 'Running test_run_1.py...'
+            sh '''
+                source /tmp/aws-env-vars.sh
+                python3 tests/test_run_1.py
+            '''
+            
+            echo 'Running test_run_2.py...'
+            sh '''
+                source /tmp/aws-env-vars.sh
+                python3 tests/test_run_2.py
+            '''
+            
+            echo 'Running test_run_3.py...'
+            sh '''
+                source /tmp/aws-env-vars.sh
+                python3 tests/test_run_3.py
+            '''
         }
+    }
+}
         
         stage('SQL Test') {
             steps {
