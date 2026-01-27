@@ -117,28 +117,28 @@ EOF
         }
         
         stage('Test') {
-    steps {
-        container('python') {
-            echo 'Running test_run_1.py...'
-            sh '''
-                source /tmp/aws-env-vars.sh
-                python3 tests/test_run_1.py
-            '''
-            
-            echo 'Running test_run_2.py...'
-            sh '''
-                source /tmp/aws-env-vars.sh
-                python3 tests/test_run_2.py
-            '''
-            
-            echo 'Running test_run_3.py...'
-            sh '''
-                source /tmp/aws-env-vars.sh
-                python3 tests/test_run_3.py
-            '''
+            steps {
+                container('python') {
+                    echo 'Running test_run_1.py...'
+                    sh '''
+                        source /tmp/aws-env-vars.sh
+                        python3 tests/test_run_1.py
+                    '''
+                    
+                    echo 'Running test_run_2.py...'
+                    sh '''
+                        source /tmp/aws-env-vars.sh
+                        python3 tests/test_run_2.py
+                    '''
+                    
+                    echo 'Running test_run_3.py...'
+                    sh '''
+                        source /tmp/aws-env-vars.sh
+                        python3 tests/test_run_3.py
+                    '''
+                }
+            }
         }
-    }
-}
         
         stage('SQL Test') {
             steps {
