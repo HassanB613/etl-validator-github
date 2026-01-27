@@ -26,42 +26,26 @@ spec:
     }
     
     environment {
-        // Only hardcode what's NOT in the Python script
         TARGET_ROLE = "arn:aws:iam::448049811908:role/mtf-pm-dev-jenkins-execution-role"
         AWS_REGION = "us-east-1"
     }
     
     stages {
-        stage('Verify Initial Identity') {
+        stage('Setup AWS Credentials') {
             steps {
                 container('awscli') {
-                    echo 'Checking initial AWS identity from service account...'
-                    sh 'aws sts get-caller-identity'
-                }
-            }
-        }
-        
-        stage('Assume Target Role') {
-            steps {
-                container('awscli') {
-                    script {
-                        echo "Assuming role: ${env.TARGET_ROLE}"
-                        
-                        sh '''
-                        # Assume the role with S3 permissions
+                    sh '''
                         aws sts assume-role \
                           --role-arn ${TARGET_ROLE} \
-                          --role-session-name jenkins-test-${BUILD_NUMBER} \
+                          --role-session-name jenkins-${BUILD_NUMBER} \
                           --output text \
                           --query Credentials \
                           > /tmp/role-creds.txt
                         
-                        # Extract credentials
                         export AWS_ACCESS_KEY_ID=$(cut -f1 /tmp/role-creds.txt)
                         export AWS_SECRET_ACCESS_KEY=$(cut -f3 /tmp/role-creds.txt)
                         export AWS_SESSION_TOKEN=$(cut -f4 /tmp/role-creds.txt)
                         
-                        # Save to file for use in other stages
                         cat > /tmp/aws-env-vars.sh <<EOF
 export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
 export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
@@ -71,13 +55,8 @@ unset AWS_WEB_IDENTITY_TOKEN_FILE
 unset AWS_ROLE_ARN
 EOF
                         
-                        echo "Successfully assumed role"
-                        
-                        # Verify the assumed role
-                        source /tmp/aws-env-vars.sh
-                        aws sts get-caller-identity
-                        '''
-                    }
+                        echo "AWS credentials configured"
+                    '''
                 }
             }
         }
@@ -88,30 +67,6 @@ EOF
                     echo 'Building...'
                     echo 'Installing Python dependencies...'
                     sh 'python3 -m pip install -r requirements.txt'
-                }
-            }
-        }
-        
-        stage('Verify AWS Access') {
-            steps {
-                container('awscli') {
-                    echo 'Testing S3 access with assumed role...'
-                    sh '''
-                        # Source the assumed role credentials
-                        source /tmp/aws-env-vars.sh
-                        
-                        echo "=== Current AWS Identity ==="
-                        aws sts get-caller-identity
-                        
-                        echo ""
-                        echo "=== Testing S3 Access ==="
-                        # The Python script has BUCKET defined, so we don't need to hardcode it here
-                        # Just verify we can list S3 buckets
-                        aws s3 ls | head -5
-                        
-                        echo ""
-                        echo "AWS access verified successfully"
-                    '''
                 }
             }
         }
@@ -157,23 +112,14 @@ EOF
                 }
             }
         }
+    }
     
     post {
         always {
             echo 'Pipeline finished.'
             container('awscli') {
-                sh '''
-                    # Cleanup sensitive files
-                    rm -f /tmp/aws-env-vars.sh /tmp/role-creds.txt
-                    echo "Cleaned up temporary credential files"
-                '''
+                sh 'rm -f /tmp/aws-env-vars.sh /tmp/role-creds.txt'
             }
-        }
-        success {
-            echo 'All tests passed!'
-        }
-        failure {
-            echo 'Pipeline failed. Check logs above.'
         }
     }
 }
