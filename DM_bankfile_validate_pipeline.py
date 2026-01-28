@@ -35,13 +35,33 @@ glue = boto3.client("glue", region_name="us-east-1")
 
 # Load TestRail configuration
 config = configparser.ConfigParser()
-config.read("testrail_config.ini")
+# Try multiple paths to find the config file
+config_paths = [
+    "testrail_config.ini",
+    "../testrail_config.ini",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "testrail_config.ini")
+]
+config_found = False
+for config_path in config_paths:
+    if os.path.exists(config_path):
+        config.read(config_path)
+        config_found = True
+        break
 
-TESTRAIL_URL = config["TestRail"]["url"]
-TESTRAIL_USERNAME = config["TestRail"]["username"]
-TESTRAIL_API_KEY = config["TestRail"]["api_key"]
-TESTRAIL_RUN_ID = int(config["TestRail"]["run_id"])
-TESTRAIL_TEST_ID = int(config["TestRail"]["test_id"])
+if config_found and "TestRail" in config:
+    TESTRAIL_URL = config["TestRail"]["url"]
+    TESTRAIL_USERNAME = config["TestRail"]["username"]
+    TESTRAIL_API_KEY = config["TestRail"]["api_key"]
+    TESTRAIL_RUN_ID = int(config["TestRail"]["run_id"])
+    TESTRAIL_TEST_ID = int(config["TestRail"]["test_id"])
+else:
+    # Default values if config not found
+    TESTRAIL_URL = ""
+    TESTRAIL_USERNAME = ""
+    TESTRAIL_API_KEY = ""
+    TESTRAIL_RUN_ID = 0
+    TESTRAIL_TEST_ID = 0
+    print("Warning: testrail_config.ini not found. TestRail reporting will be skipped.")
 
 # --------------------
 # TestRail Configuration
@@ -53,6 +73,9 @@ def report_to_testrail(test_id, status, comment):
     :param status: Test result status (1=Passed, 2=Blocked, 3=Untested, 4=Retest, 5=Failed)
     :param comment: Additional comments for the test result
     """
+    if not TESTRAIL_URL or not TESTRAIL_API_KEY:
+        print("⚠️ TestRail not configured. Skipping test result reporting.")
+        return
     url = f"{TESTRAIL_URL}index.php?/api/v2/add_result/{test_id}"
     headers = {"Content-Type": "application/json"}
     payload = {
