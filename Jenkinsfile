@@ -54,15 +54,15 @@ spec:
                           --role-session-name jenkins-test-${BUILD_NUMBER} \
                           --output text \
                           --query Credentials \
-                          > /tmp/role-creds.txt
+                          > ${WORKSPACE}/.role-creds.txt
                         
                         # Extract credentials
-                        export AWS_ACCESS_KEY_ID=$(cut -f1 /tmp/role-creds.txt)
-                        export AWS_SECRET_ACCESS_KEY=$(cut -f3 /tmp/role-creds.txt)
-                        export AWS_SESSION_TOKEN=$(cut -f4 /tmp/role-creds.txt)
+                        export AWS_ACCESS_KEY_ID=$(cut -f1 ${WORKSPACE}/.role-creds.txt)
+                        export AWS_SECRET_ACCESS_KEY=$(cut -f3 ${WORKSPACE}/.role-creds.txt)
+                        export AWS_SESSION_TOKEN=$(cut -f4 ${WORKSPACE}/.role-creds.txt)
                         
-                        # Save to file for use in other stages
-                        cat > /tmp/aws-env-vars.sh <<EOF
+                        # Save to workspace for use in other containers
+                        cat > ${WORKSPACE}/.aws-env-vars.sh <<EOF
 export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
 export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
 export AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
@@ -74,7 +74,7 @@ EOF
                         echo "Successfully assumed role"
                         
                         # Verify the assumed role
-                        . /tmp/aws-env-vars.sh
+                        . ${WORKSPACE}/.aws-env-vars.sh
                         aws sts get-caller-identity
                         '''
                     }
@@ -98,7 +98,7 @@ EOF
                     echo 'Testing S3 access with assumed role...'
                     sh '''
                         # Source the assumed role credentials
-                        . /tmp/aws-env-vars.sh
+                        . ${WORKSPACE}/.aws-env-vars.sh
                         
                         echo "=== Current AWS Identity ==="
                         aws sts get-caller-identity
@@ -122,8 +122,8 @@ EOF
                     echo 'Running tests with assumed AWS credentials...'
                     sh '''
                         # Source AWS credentials for Python tests
-                        if [ -f /tmp/aws-env-vars.sh ]; then
-                            . /tmp/aws-env-vars.sh
+                        if [ -f ${WORKSPACE}/.aws-env-vars.sh ]; then
+                            . ${WORKSPACE}/.aws-env-vars.sh
                         fi
                         
                         python3 tests/test_run_1.py
@@ -131,13 +131,13 @@ EOF
                     
                     echo 'Running test_run_2.py...'
                     sh '''
-                        . /tmp/aws-env-vars.sh
+                        . ${WORKSPACE}/.aws-env-vars.sh
                         python3 tests/test_run_2.py
                     '''
                     
                     echo 'Running test_run_3.py...'
                     sh '''
-                        . /tmp/aws-env-vars.sh
+                        . ${WORKSPACE}/.aws-env-vars.sh
                         python3 tests/test_run_3.py
                     '''
                 }
@@ -157,7 +157,7 @@ EOF
                         ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc-dev
                         
                         # Source AWS credentials and run tests
-                        . /tmp/aws-env-vars.sh
+                        . ${WORKSPACE}/.aws-env-vars.sh
                         python3 tests/run_sql_test.py
                     '''
                 }
@@ -168,10 +168,10 @@ EOF
     post {
         always {
             echo 'Pipeline finished.'
-            container('awscli') {
+            container('python') {
                 sh '''
                     # Cleanup sensitive files
-                    rm -f /tmp/aws-env-vars.sh /tmp/role-creds.txt
+                    rm -f ${WORKSPACE}/.aws-env-vars.sh ${WORKSPACE}/.role-creds.txt
                     echo "Cleaned up temporary credential files"
                 '''
             }
