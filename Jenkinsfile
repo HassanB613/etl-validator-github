@@ -74,7 +74,7 @@ EOF
                         echo "Successfully assumed role"
                         
                         # Verify the assumed role
-                        source /tmp/aws-env-vars.sh
+                        . /tmp/aws-env-vars.sh
                         aws sts get-caller-identity
                         '''
                     }
@@ -98,7 +98,7 @@ EOF
                     echo 'Testing S3 access with assumed role...'
                     sh '''
                         # Source the assumed role credentials
-                        source /tmp/aws-env-vars.sh
+                        . /tmp/aws-env-vars.sh
                         
                         echo "=== Current AWS Identity ==="
                         aws sts get-caller-identity
@@ -123,25 +123,22 @@ EOF
                     sh '''
                         # Source AWS credentials for Python tests
                         if [ -f /tmp/aws-env-vars.sh ]; then
-                            source /tmp/aws-env-vars.sh
+                            . /tmp/aws-env-vars.sh
                         fi
                         
-                        cd tests
-                        python3 test_run_1.py
+                        python3 tests/test_run_1.py
                     '''
                     
                     echo 'Running test_run_2.py...'
                     sh '''
-                        source /tmp/aws-env-vars.sh
-                        cd tests
-                        python3 test_run_2.py
+                        . /tmp/aws-env-vars.sh
+                        python3 tests/test_run_2.py
                     '''
                     
                     echo 'Running test_run_3.py...'
                     sh '''
-                        source /tmp/aws-env-vars.sh
-                        cd tests
-                        python3 test_run_3.py
+                        . /tmp/aws-env-vars.sh
+                        python3 tests/test_run_3.py
                     '''
                 }
             }
@@ -160,9 +157,8 @@ EOF
                         ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc-dev
                         
                         # Source AWS credentials and run tests
-                        source /tmp/aws-env-vars.sh
-                        cd tests
-                        python3 run_sql_test.py
+                        . /tmp/aws-env-vars.sh
+                        python3 tests/run_sql_test.py
                     '''
                 }
             }
