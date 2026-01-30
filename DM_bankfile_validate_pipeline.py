@@ -28,7 +28,7 @@ ARCHIVE_PREFIX = "bankfile/archive/2025/07"
 ARCHIVE_PREFIX_2 = "bankfile/archive/2025/07"  # Dev2 archive prefix
 ERROR_CSV_PREFIX = "bankfile/error/"
 RUN_TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S")  # Global timestamp for filenames
-ENV_SUFFIX = "dev"
+ENV_SUFFIX = "dev2"
 
 s3 = boto3.client("s3")
 glue = boto3.client("glue", region_name="us-east-1")
