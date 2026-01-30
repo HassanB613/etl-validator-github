@@ -207,11 +207,7 @@ def upload_to_s3(file_path):
     print(f"📤 Uploading {file_path} to s3://{BUCKET}/{s3_key}")
     try:
         s3.upload_file(file_path, BUCKET, s3_key)
-        # Trigger AWS Glue job immediately after upload
-        print(">>> Triggering AWS Glue job after upload")
-        glue_success = wait_for_glue_success(GLUE_JOB_NAME)
-        if not glue_success:
-            raise Exception("❌ AWS Glue job failed to complete successfully after upload.")
+        print(f"✅ Successfully uploaded to s3://{BUCKET}/{s3_key}")
     except Exception as e:
         print(f"⚠️ S3 upload failed: {str(e)}")
         print(f"ℹ️ Continuing without AWS operations. Please configure AWS credentials if S3 upload is required.")
@@ -256,8 +252,8 @@ def wait_for_glue_success(job_name, timeout=600):
         print(f"⌛ Glue job status: {status}")
         if status in ["SUCCEEDED", "FAILED", "STOPPED"]:
             if status == "SUCCEEDED":
-                print("✅ Glue job succeeded. Waiting 25 seconds for S3 propagation...")
-                time.sleep(25)
+                print("✅ Glue job succeeded. Waiting 45 seconds for S3 propagation...")
+                time.sleep(45)
             return status == "SUCCEEDED"
         time.sleep(10)
 
@@ -443,11 +439,20 @@ def run_test_scenario(file_type, seed=None, rows=50):
             step_status["Step 4"] = "Failed"
             raise Exception("❌ Glue job failed.")
 
-        time.sleep(20)
+        # Additional wait for S3 consistency after Glue completes
+        print("⏳ Waiting additional 30 seconds for S3 consistency...")
+        time.sleep(30)
 
         print(">>> Step 5: Validate S3 outputs (Ready folder)")
         try:
-            file_absent = not check_s3_file_exists_with_naming_convention(S3_PREFIX, timestamp)
+            # Retry up to 3 times with 15-second intervals for S3 consistency
+            file_absent = False
+            for retry in range(3):
+                file_absent = not check_s3_file_exists_with_naming_convention(S3_PREFIX, timestamp)
+                if file_absent:
+                    break
+                print(f"⏳ File still in ready folder, waiting 15s (retry {retry + 1}/3)...")
+                time.sleep(15)
             assert file_absent, f"❌ {file_type.capitalize()} file still found in S3 ready folder: {timestamp}"
             print(f"✅ {file_type.capitalize()} file is no longer in the S3 ready folder.")
         except AssertionError as e:
@@ -458,7 +463,14 @@ def run_test_scenario(file_type, seed=None, rows=50):
             current_year = datetime.now().strftime("%Y")
             current_month = datetime.now().strftime("%m")
             archive_prefix = f"bankfile/archive/{current_year}/{current_month}"
-            file_in_archive = check_s3_file_exists_with_naming_convention(archive_prefix, timestamp)
+            # Retry up to 3 times with 15-second intervals for S3 consistency
+            file_in_archive = False
+            for retry in range(3):
+                file_in_archive = check_s3_file_exists_with_naming_convention(archive_prefix, timestamp)
+                if file_in_archive:
+                    break
+                print(f"⏳ File not yet in archive folder, waiting 15s (retry {retry + 1}/3)...")
+                time.sleep(15)
             assert file_in_archive, f"❌ {file_type.capitalize()} file not found in S3 archive folder: {timestamp}"
             print(f"✅ {file_type.capitalize()} file successfully moved to the archive folder.")
         except AssertionError as e:
