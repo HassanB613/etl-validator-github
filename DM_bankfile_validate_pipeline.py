@@ -539,7 +539,7 @@ def run_test_scenario(file_type, seed=None, rows=50):
                     print(f"ℹ️ Skipping error folder validation. Please configure AWS credentials if S3 access is required.")
             else:
                 # For invalid scenario, check for the newest error file matching the date
-                error_prefix = f"mtfpm.dev.dmbankerrorfile.{timestamp[:8]}"  # YYYYMMDD
+                error_prefix = f"mtfdm_{ENV_SUFFIX}_dmbankerrorfile_{timestamp}"  # matches mtfdm_dev2_dmbankerrorfile_YYYYMMDD_HHMMSS
                 newest_error_file = get_newest_error_file(ERROR_CSV_PREFIX, error_prefix)
                 assert newest_error_file, f"❌ No error file found in S3 error folder with prefix: {error_prefix}"
                 print(f"✅ Newest error file for this run: {newest_error_file}")
@@ -569,7 +569,7 @@ def run_test_scenario(file_type, seed=None, rows=50):
             archive_found, archive_downloaded = download_specific_archive_file(archive_prefix, timestamp, evidence_dir)
             
             # Download only the newest error file (for invalid scenarios)
-            error_prefix = f"mtfpm.dev.dmbankerrorfile.{timestamp[:8]}"  # YYYYMMDD
+            error_prefix = f"mtfdm_{ENV_SUFFIX}_dmbankerrorfile_{timestamp}"  # matches mtfdm_dev2_dmbankerrorfile_YYYYMMDD_HHMMSS
             error_files = download_newest_error_file_to_local(ERROR_CSV_PREFIX, evidence_dir, error_prefix)
             
             # Save S3 listings for reference
@@ -1146,7 +1146,7 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
         print(">>> Step 7: Validate S3 outputs (Error folder)")
         try:
             # For these scenarios, expect error file to exist
-            error_prefix = f"mtfpm.dev.dmbankerrorfile.{timestamp[:8]}"  # YYYYMMDD
+            error_prefix = f"mtfdm_{ENV_SUFFIX}_dmbankerrorfile_{timestamp}"  # matches mtfdm_dev2_dmbankerrorfile_YYYYMMDD_HHMMSS
             newest_error_file = get_newest_error_file(ERROR_CSV_PREFIX, error_prefix)
             assert newest_error_file, f"❌ No error file found in S3 error folder with prefix: {error_prefix}"
             print(f"✅ Newest error file for this run: {newest_error_file}")
@@ -1171,7 +1171,7 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
             archive_found, archive_downloaded = download_specific_archive_file(archive_prefix, timestamp, evidence_dir)
             
             # Download only the newest error file
-            error_prefix = f"mtfpm.dev.dmbankerrorfile.{timestamp[:8]}"  # YYYYMMDD
+            error_prefix = f"mtfdm_{ENV_SUFFIX}_dmbankerrorfile_{timestamp}"  # matches mtfdm_dev2_dmbankerrorfile_YYYYMMDD_HHMMSS
             error_files = download_newest_error_file_to_local(ERROR_CSV_PREFIX, evidence_dir, error_prefix)
             
             # Save S3 listings for reference
