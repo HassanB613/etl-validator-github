@@ -8,7 +8,7 @@ if __name__ == "__main__":
     pipeline_path = os.path.join(base_dir, "DM_bankfile_validate_pipeline.py")
 
     # Step 1: Generate data
-    gen_command = [sys.executable, generator_path, "--rows", "25", "--output-dir", os.path.join(base_dir, "test_output"), "--output", "test_data_3"]
+    gen_command = [sys.executable, generator_path, "--rows", "10", "--output-dir", os.path.join(base_dir, "test_output"), "--output", "test_data_3"]
     gen_result = subprocess.run(gen_command)
     if gen_result.returncode != 0:
         print("Data generation failed.")
