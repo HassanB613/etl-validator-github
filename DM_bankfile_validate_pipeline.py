@@ -216,45 +216,90 @@ def upload_to_s3(file_path):
 # --------------------
 # Step 3: Trigger & monitor Glue
 # --------------------
+def get_running_glue_job(job_name):
+    """
+    Check if the Glue job is already running.
+    Returns the JobRunId if running, None otherwise.
+    """
+    try:
+        # Get recent job runs (RUNNING or STARTING states)
+        response = glue.get_job_runs(JobName=job_name, MaxResults=5)
+        for run in response.get("JobRuns", []):
+            state = run.get("JobRunState")
+            if state in ["RUNNING", "STARTING", "WAITING"]:
+                print(f"🔍 Found existing Glue job run: {run['Id']} (State: {state})")
+                return run["Id"]
+        return None
+    except Exception as e:
+        print(f"⚠️ Could not check for running Glue jobs: {e}")
+        return None
+
 def wait_for_glue_success(job_name, timeout=600):
-    print("🕒 Starting Glue job...")
+    """
+    Wait for Glue job to succeed. First checks if job is already running (auto-triggered by S3),
+    if so, monitors that run. Otherwise starts a new run.
+    """
     run_id = None
-    attempt = 0
-    # Retry indefinitely on concurrency errors
-    while True:
-        attempt += 1
-        try:
-            response = glue.start_job_run(JobName=job_name)
-            run_id = response["JobRunId"]
-            break
-        # Modified to catch any exception and inspect for concurrency
-        except Exception as e:
-            # Determine if this is a concurrency exception
-            error_code = None
-            if isinstance(e, ClientError):
-                error_code = e.response.get("Error", {}).get("Code")
-            elif "ConcurrentRunsExceededException" in str(e):
-                error_code = "ConcurrentRunsExceededException"
-            if error_code == "ConcurrentRunsExceededException":
-                wait_time = min(60, 10 * attempt)
-                print(f"❌ Concurrent runs exceeded. Retrying in {wait_time} seconds (attempt {attempt})...")
-                time.sleep(wait_time)
-                continue
-            print(f"❌ Error starting Glue job: {e}")
-            return False
+    
+    # First, check if job is already running (may have been auto-triggered by S3 file upload)
+    print("🔍 Checking if Glue job is already running...")
+    existing_run_id = get_running_glue_job(job_name)
+    
+    if existing_run_id:
+        print(f"✅ Glue job is already running (RunId: {existing_run_id}). Monitoring existing run...")
+        run_id = existing_run_id
+    else:
+        print("🕒 No running Glue job found. Starting new Glue job...")
+        attempt = 0
+        # Retry on concurrency errors (in case job started between our check and start attempt)
+        while True:
+            attempt += 1
+            try:
+                response = glue.start_job_run(JobName=job_name)
+                run_id = response["JobRunId"]
+                print(f"✅ Started new Glue job run: {run_id}")
+                break
+            except Exception as e:
+                # Determine if this is a concurrency exception
+                error_code = None
+                if isinstance(e, ClientError):
+                    error_code = e.response.get("Error", {}).get("Code")
+                elif "ConcurrentRunsExceededException" in str(e):
+                    error_code = "ConcurrentRunsExceededException"
+                if error_code == "ConcurrentRunsExceededException":
+                    # Job started between our check and start - find it and monitor
+                    print(f"⚠️ Concurrent run detected. Checking for the running job...")
+                    time.sleep(5)
+                    existing_run_id = get_running_glue_job(job_name)
+                    if existing_run_id:
+                        print(f"✅ Found running job: {existing_run_id}. Monitoring it...")
+                        run_id = existing_run_id
+                        break
+                    # If still no running job found, retry start
+                    wait_time = min(60, 10 * attempt)
+                    print(f"⏳ Retrying in {wait_time} seconds (attempt {attempt})...")
+                    time.sleep(wait_time)
+                    continue
+                print(f"❌ Error starting Glue job: {e}")
+                return False
+    
     if not run_id:
-        print("❌ Could not start Glue job after retries.")
+        print("❌ Could not start or find Glue job.")
         return False
 
+    # Monitor the job run
     start_time = time.time()
     while time.time() - start_time < timeout:
-        status = glue.get_job_run(JobName=job_name, RunId=run_id)["JobRun"]["JobRunState"]
-        print(f"⌛ Glue job status: {status}")
-        if status in ["SUCCEEDED", "FAILED", "STOPPED"]:
-            if status == "SUCCEEDED":
-                print("✅ Glue job succeeded. Waiting 45 seconds for S3 propagation...")
-                time.sleep(45)
-            return status == "SUCCEEDED"
+        try:
+            status = glue.get_job_run(JobName=job_name, RunId=run_id)["JobRun"]["JobRunState"]
+            print(f"⌛ Glue job status: {status}")
+            if status in ["SUCCEEDED", "FAILED", "STOPPED"]:
+                if status == "SUCCEEDED":
+                    print("✅ Glue job succeeded. Waiting 45 seconds for S3 propagation...")
+                    time.sleep(45)
+                return status == "SUCCEEDED"
+        except Exception as e:
+            print(f"⚠️ Error checking job status: {e}")
         time.sleep(10)
 
     print("❌ Timeout waiting for Glue job to complete.")
@@ -511,34 +556,26 @@ def run_test_scenario(file_type, seed=None, rows=50):
     except Exception as e:
         print(str(e))
     finally:
-        # --- Download S3 ready and error folders as test evidence BEFORE TestRail reporting ---
+        # --- Download S3 evidence BEFORE TestRail reporting ---
         if file_path:  # Only proceed if file_path was set
             test_output_dir = os.path.dirname(file_path)
             evidence_dir = os.path.join(test_output_dir, "test evidence s3 ready folder")
-            print(f"\n>>> Downloading S3 ready and error folders to evidence directory: {evidence_dir}")
-            ready_files = safe_s3_evidence_collection(S3_PREFIX, evidence_dir, "s3_ready_listing_before_delete.txt", download_s3_folder_to_local)
-            # Download only the newest error file
+            print(f"\n>>> Collecting S3 evidence to: {evidence_dir}")
+            
+            # Download only the specific archive file (same name as uploaded)
+            current_year = datetime.now().strftime("%Y")
+            current_month = datetime.now().strftime("%m")
+            archive_prefix = f"bankfile/archive/{current_year}/{current_month}"
+            archive_found, archive_downloaded = download_specific_archive_file(archive_prefix, timestamp, evidence_dir)
+            
+            # Download only the newest error file (for invalid scenarios)
             error_prefix = f"mtfpm.dev.dmbankerrorfile.{timestamp[:8]}"  # YYYYMMDD
             error_files = download_newest_error_file_to_local(ERROR_CSV_PREFIX, evidence_dir, error_prefix)
+            
+            # Save S3 listings for reference
             save_s3_listing_to_file(ERROR_CSV_PREFIX, evidence_dir, "s3_error_listing_before_delete.txt")
-            # Capture automated "screenshots" (snapshots) of archive & error folders
-            try:
-                from s3_bucket_snapshot import list_s3_objects, write_outputs  # type: ignore
-                snap_dir = os.path.join(evidence_dir, "snapshots")
-                os.makedirs(snap_dir, exist_ok=True)
-                current_year = datetime.now().strftime("%Y")
-                current_month = datetime.now().strftime("%m")
-                archive_prefix = f"bankfile/archive/{current_year}/{current_month}"
-                # Error folder snapshot
-                err_objs = list_s3_objects(BUCKET, ERROR_CSV_PREFIX, limit=500)
-                write_outputs(err_objs, snap_dir, f"error_folder_{timestamp}", emit_png=False)
-                # Archive folder snapshot (limit to avoid huge dump)
-                arch_objs = list_s3_objects(BUCKET, archive_prefix, limit=1000)
-                write_outputs(arch_objs, snap_dir, f"archive_folder_{timestamp}", emit_png=False)
-                print(f"🖼️ Saved S3 folder snapshots to {snap_dir}")
-            except Exception as e:
-                print(f"⚠️ Could not create S3 snapshot artifacts: {e}")
-            if ready_files == 0 and error_files == 0:
+            
+            if not archive_downloaded and error_files == 0:
                 if os.path.exists(evidence_dir) and not os.listdir(evidence_dir):
                     os.rmdir(evidence_dir)
                     print(f"🗑️ Removed empty evidence directory: {evidence_dir}")
@@ -1030,6 +1067,29 @@ def download_newest_error_file_to_local(s3_prefix, local_evidence_dir, keyword):
         print(f"ℹ️ Skipping error file download. Please configure AWS credentials if S3 access is required.")
         return 0
 
+def download_specific_archive_file(archive_prefix, timestamp, local_evidence_dir):
+    """
+    Download only the specific file from archive folder that matches our uploaded filename.
+    Returns (found, downloaded) tuple - found=True if file exists, downloaded=True if successfully downloaded.
+    """
+    expected_filename = f"mtfdm_{ENV_SUFFIX}_dmbankdata_{timestamp}.parquet"
+    try:
+        result = s3.list_objects_v2(Bucket=BUCKET, Prefix=archive_prefix)
+        for obj in result.get("Contents", []):
+            if obj["Key"].endswith(expected_filename):
+                # Found the file - download it
+                os.makedirs(local_evidence_dir, exist_ok=True)
+                local_path = os.path.join(local_evidence_dir, os.path.basename(obj["Key"]))
+                print(f"⬇️ Downloading archive file {obj['Key']} to {local_path}")
+                s3.download_file(BUCKET, obj["Key"], local_path)
+                print(f"✅ Successfully downloaded archive file: {expected_filename}")
+                return True, True
+        print(f"❌ Archive file not found: {expected_filename}")
+        return False, False
+    except Exception as e:
+        print(f"⚠️ Failed to download archive file: {str(e)}")
+        return False, False
+
 def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp):
     """
     Run the full ETL pipeline (Glue, S3 evidence, TestRail) for a file already generated and uploaded.
@@ -1098,17 +1158,26 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
     except Exception as e:
         print(str(e))
     finally:
-        # --- Download S3 ready and error folders as test evidence BEFORE TestRail reporting ---
+        # --- Download S3 evidence BEFORE TestRail reporting ---
         if file_path:  # Only proceed if file_path was set
             test_output_dir = os.path.dirname(file_path)
             evidence_dir = os.path.join(test_output_dir, "test evidence s3 ready folder")
-            print(f"\n>>> Downloading S3 ready and error folders to evidence directory: {evidence_dir}")
-            ready_files = safe_s3_evidence_collection(S3_PREFIX, evidence_dir, "s3_ready_listing_before_delete.txt", download_s3_folder_to_local)
+            print(f"\n>>> Collecting S3 evidence to: {evidence_dir}")
+            
+            # Download only the specific archive file (same name as uploaded)
+            current_year = datetime.now().strftime("%Y")
+            current_month = datetime.now().strftime("%m")
+            archive_prefix = f"bankfile/archive/{current_year}/{current_month}"
+            archive_found, archive_downloaded = download_specific_archive_file(archive_prefix, timestamp, evidence_dir)
+            
             # Download only the newest error file
             error_prefix = f"mtfpm.dev.dmbankerrorfile.{timestamp[:8]}"  # YYYYMMDD
             error_files = download_newest_error_file_to_local(ERROR_CSV_PREFIX, evidence_dir, error_prefix)
+            
+            # Save S3 listings for reference
             save_s3_listing_to_file(ERROR_CSV_PREFIX, evidence_dir, "s3_error_listing_before_delete.txt")
-            if ready_files == 0 and error_files == 0:
+            
+            if not archive_downloaded and error_files == 0:
                 if os.path.exists(evidence_dir) and not os.listdir(evidence_dir):
                     os.rmdir(evidence_dir)
                     print(f"🗑️ Removed empty evidence directory: {evidence_dir}")

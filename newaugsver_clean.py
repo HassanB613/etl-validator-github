@@ -89,6 +89,13 @@ class BankDataGenerator:
                 {'ID': 'MFR003', 'Name': 'Merck & Co., Inc.'}
             ]
         
+        # Validate MFR org IDs don't exceed PayeeID max_length (for M, D, P: PayeeID = OrganizationIdentifier)
+        payee_id_max = field_constraints.get('PayeeID', {}).get('max_length', 9)
+        for mfr in self.mfr_orgs:
+            if len(mfr['ID']) > payee_id_max:
+                mfr['ID'] = mfr['ID'][:payee_id_max]
+                print(f"Warning: MFR ID truncated to {payee_id_max} chars: {mfr['ID']}")
+        
         self.company_names = [
             "Pfizer Inc.", "Johnson & Johnson", "Merck & Co., Inc.", "AbbVie Inc.", "Amgen Inc.",
             "Gilead Sciences, Inc.", "Biogen Inc.", "Regeneron Pharmaceuticals", "Moderna, Inc.",
@@ -226,13 +233,31 @@ class BankDataGenerator:
         return first + rest
     
     def generate_unique_id(self, org_code, prefix, num):
-        """Generate a unique ID for the given organization code"""
+        """Generate a unique ID for the given organization code.
+        
+        For M, D, P codes: PayeeID must equal OrganizationIdentifier.
+        PayeeID max_length is 9, so we truncate the numeric portion to fit.
+        """
         if org_code in ['M', 'D', 'P']:
-            base_id = f"{prefix}{num}"
+            # Calculate max digits for numeric portion to fit within PayeeID max_length (9)
+            payee_id_max = self.field_constraints.get('PayeeID', {}).get('max_length', 9)
+            max_num_digits = payee_id_max - len(prefix)
+            
+            # Truncate num to fit within the allowed digits
+            num_str = str(num)
+            if len(num_str) > max_num_digits:
+                num_str = num_str[:max_num_digits]
+            
+            base_id = f"{prefix}{num_str}"
             counter = 0
             while base_id in self.used_payee_ids[org_code]:
                 counter += 1
-                base_id = f"{prefix}{num + counter}"
+                # Regenerate with counter, ensuring it still fits
+                new_num = int(num_str) + counter
+                new_num_str = str(new_num)
+                if len(new_num_str) > max_num_digits:
+                    new_num_str = new_num_str[:max_num_digits]
+                base_id = f"{prefix}{new_num_str}"
             self.used_payee_ids[org_code].add(base_id)
             return base_id
         else:
