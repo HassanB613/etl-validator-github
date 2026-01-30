@@ -279,15 +279,24 @@ def wait_for_glue_success(job_name, timeout=600):
     """
     run_id = None
     
-    # First, check if job is already running (may have been auto-triggered by S3 file upload)
-    print("🔍 Checking if Glue job is already running...")
-    existing_run_id = get_running_glue_job(job_name)
+    # Wait a moment for S3 trigger to potentially start the Glue job
+    print("⏳ Waiting 15 seconds for S3 trigger to potentially start Glue job...")
+    time.sleep(15)
     
-    if existing_run_id:
-        print(f"✅ Glue job is already running (RunId: {existing_run_id}). Monitoring existing run...")
-        run_id = existing_run_id
-    else:
-        print("🕒 No running Glue job found. Starting new Glue job...")
+    # Check multiple times for a running job (S3 trigger may have a delay)
+    print("🔍 Checking if Glue job is already running...")
+    for check_attempt in range(3):
+        existing_run_id = get_running_glue_job(job_name)
+        if existing_run_id:
+            print(f"✅ Glue job is already running (RunId: {existing_run_id}). Monitoring existing run...")
+            run_id = existing_run_id
+            break
+        if check_attempt < 2:
+            print(f"⏳ No running job found yet, waiting 10s (check {check_attempt + 1}/3)...")
+            time.sleep(10)
+    
+    if not run_id:
+        print("🕒 No running Glue job found after checks. Starting new Glue job...")
         attempt = 0
         # Retry on concurrency errors (in case job started between our check and start attempt)
         while True:
