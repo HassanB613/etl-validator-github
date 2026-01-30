@@ -502,7 +502,7 @@ def run_test_scenario(file_type, seed=None, rows=50):
     file_path = None  # Initialize file_path
     try:
         print(f"\n>>> Running test for scenario: {file_type.upper()}")
-        timestamp = datetime.now().strftime("%Y%m%d.%H%M%S")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         is_valid = file_type == "valid"
         file_path = run_generator_file(is_valid=is_valid, timestamp=timestamp, seed=seed, rows=rows)
 
@@ -1720,7 +1720,7 @@ def main():
             formats=args.formats,
             seed=args.seed,
             extra_args=extra,
-            timestamp=datetime.now().strftime("%Y%m%d.%H%M%S")
+            timestamp=datetime.now().strftime("%Y%m%d_%H%M%S")
         )
         return
     elif args.extra_columns:
@@ -1730,7 +1730,7 @@ def main():
             formats=args.formats,
             seed=args.seed,
             extra_args=extra,
-            timestamp=datetime.now().strftime("%Y%m%d.%H%M%S")
+            timestamp=datetime.now().strftime("%Y%m%d_%H%M%S")
         )
         return
     elif args.invalid_extension:
@@ -1740,7 +1740,7 @@ def main():
             formats=args.formats,
             seed=args.seed,
             extra_args=extra,
-            timestamp=datetime.now().strftime("%Y%m%d.%H%M%S")
+            timestamp=datetime.now().strftime("%Y%m%d_%H%M%S")
         )
         return
     elif args.invalid_mfr_ein_ssn is not None:
@@ -1750,7 +1750,7 @@ def main():
             formats=args.formats,
             seed=args.seed,
             extra_args=extra,
-            timestamp=datetime.now().strftime("%Y%m%d.%H%M%S")
+            timestamp=datetime.now().strftime("%Y%m%d_%H%M%S")
         )
         return
     elif args.invalid_tin_type:
@@ -1761,7 +1761,7 @@ def main():
             formats=args.formats,
             seed=args.seed,
             extra_args=extra,
-            timestamp=datetime.now().strftime("%Y%m%d.%H%M%S")
+            timestamp=datetime.now().strftime("%Y%m%d_%H%M%S")
         )
         return
     elif args.drop_rows:
@@ -1796,11 +1796,11 @@ def main():
             # 12. Invalid TIN type for Manufacturer rows
             lambda: run_invalid_values_scenario(["OrganizationTINType:Q"], rows=args.rows, formats=args.formats, seed=seed),
             # 13. Duplicate row (index 0)
-            lambda: run_duplicate_row_scenario(row_index=0, timestamp=datetime.now().strftime("%Y%m%d.%H%M%S")),
+            lambda: run_duplicate_row_scenario(row_index=0, timestamp=datetime.now().strftime("%Y%m%d_%H%M%S")),
             # 14. Duplicate row (index 1)
-            lambda: run_duplicate_row_scenario(row_index=1, timestamp=datetime.now().strftime("%Y%m%d.%H%M%S")),
+            lambda: run_duplicate_row_scenario(row_index=1, timestamp=datetime.now().strftime("%Y%m%d_%H%M%S")),
             # 15. Missing row (drop first row)
-            lambda: run_missing_row_scenario(row_indices=[0], timestamp=datetime.now().strftime("%Y%m%d.%H%M%S")),
+            lambda: run_missing_row_scenario(row_indices=[0], timestamp=datetime.now().strftime("%Y%m%d_%H%M%S")),
             # 16. Extra column
             lambda: run_extra_columns_scenario(extra_columns=["ExtraCol1"], rows=args.rows, formats=args.formats, seed=seed),
             # 17. Missing column
