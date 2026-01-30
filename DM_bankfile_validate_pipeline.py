@@ -195,13 +195,51 @@ def run_generator_file(is_valid=True, timestamp=None, seed=None, rows=50):
 # --------------------
 # Step 2: Upload to S3
 # --------------------
+def wait_for_ready_folder_empty_and_glue_idle(job_name, timeout=300):
+    """
+    Wait for the ready folder to be empty and no Glue job running before proceeding.
+    This prevents uploading a new file while a previous test is still in progress.
+    """
+    print("🔍 Checking if ready folder is empty and Glue is idle before uploading...")
+    start_time = time.time()
+    
+    while time.time() - start_time < timeout:
+        # Check if Glue job is running
+        running_job = get_running_glue_job(job_name)
+        if running_job:
+            print(f"⏳ Glue job {running_job} is still running. Waiting...")
+            time.sleep(15)
+            continue
+        
+        # Check if ready folder has any files
+        try:
+            result = s3.list_objects_v2(Bucket=BUCKET, Prefix=S3_PREFIX + "/")
+            files = [obj["Key"] for obj in result.get("Contents", []) if not obj["Key"].endswith("/")]
+            if files:
+                print(f"⏳ Ready folder still has files: {files}. Waiting for Glue to process...")
+                time.sleep(15)
+                continue
+        except Exception as e:
+            print(f"⚠️ Could not check ready folder: {e}")
+        
+        # Both conditions met - ready to proceed
+        print("✅ Ready folder is empty and Glue is idle. Safe to upload new file.")
+        return True
+    
+    print("⚠️ Timeout waiting for ready folder to clear. Proceeding anyway...")
+    return False
+
 def upload_to_s3(file_path):
     """
     Upload files to S3 with the new naming convention.
+    Waits for any running Glue job to complete first.
     """
     if not os.path.exists(file_path):
         print(f"❌ File not found: {file_path}")
         raise FileNotFoundError(f"File not found: {file_path}")
+
+    # Wait for previous test to complete before uploading
+    wait_for_ready_folder_empty_and_glue_idle(GLUE_JOB_NAME)
 
     s3_key = f"{S3_PREFIX}/{os.path.basename(file_path)}"
     print(f"📤 Uploading {file_path} to s3://{BUCKET}/{s3_key}")
