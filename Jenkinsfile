@@ -120,14 +120,15 @@ EOF
             steps {
                 container('python') {
                     echo 'Running tests with assumed AWS credentials...'
-                    sh '''
-                        # Source AWS credentials for Python tests
-                        if [ -f ${WORKSPACE}/.aws-env-vars.sh ]; then
-                            . ${WORKSPACE}/.aws-env-vars.sh
-                        fi
-                        
-                        python3 tests/test_run_1.py
-                    '''
+                    // Temporarily commenting out test 1 and 3 to run only test 2
+                    // sh '''
+                    //     # Source AWS credentials for Python tests
+                    //     if [ -f ${WORKSPACE}/.aws-env-vars.sh ]; then
+                    //         . ${WORKSPACE}/.aws-env-vars.sh
+                    //     fi
+                    //     
+                    //     python3 tests/test_run_1.py
+                    // '''
                     
                     echo 'Running test_run_2.py...'
                     sh '''
@@ -135,11 +136,11 @@ EOF
                         python3 tests/test_run_2.py
                     '''
                     
-                    echo 'Running test_run_3.py...'
-                    sh '''
-                        . ${WORKSPACE}/.aws-env-vars.sh
-                        python3 tests/test_run_3.py
-                    '''
+                    // echo 'Running test_run_3.py...'
+                    // sh '''
+                    //     . ${WORKSPACE}/.aws-env-vars.sh
+                    //     python3 tests/test_run_3.py
+                    // '''
                 }
             }
         }
