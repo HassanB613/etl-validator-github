@@ -14,7 +14,7 @@ if __name__ == "__main__":
         print("Data generation failed.")
         sys.exit(gen_result.returncode)
 
-    # Step 2: Run the pipeline script
-    pipe_command = [sys.executable, pipeline_path, "--dev2", "--rows", "10"]
+    # Step 2: Run the pipeline script with empty AddressCode to test validation
+    pipe_command = [sys.executable, pipeline_path, "--dev2", "--invalid-values", "AddressCode:", "--rows", "10"]
     pipe_result = subprocess.run(pipe_command)
     sys.exit(pipe_result.returncode)
