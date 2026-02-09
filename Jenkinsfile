@@ -129,6 +129,10 @@ EOF
                         # Source AWS credentials for Python tests
                         . ${WORKSPACE}/.aws-env-vars.sh
                         
+                        # Create allure-results directory with proper permissions
+                        mkdir -p ${WORKSPACE}/allure-results
+                        chmod 777 ${WORKSPACE}/allure-results
+                        
                         # Run pytest with Allure results
                         python3 -m pytest tests/test_etl_allure.py \
                             --alluredir=${WORKSPACE}/allure-results \
@@ -136,6 +140,9 @@ EOF
                             --tb=short \
                             -k "test_empty_address_code" \
                             || true
+                        
+                        # Fix permissions on allure results for jenkins user
+                        chmod -R 777 ${WORKSPACE}/allure-results
                     '''
                 }
             }
