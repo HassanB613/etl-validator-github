@@ -25,9 +25,10 @@ spec:
         }
     }
     
-    // Allure commandline tool - must be configured in Jenkins Global Tool Configuration
+    // Tools must be configured in Jenkins Global Tool Configuration (Manage Jenkins -> Tools)
     tools {
-        allure 'allure'  // Name configured in Manage Jenkins -> Tools -> Allure Commandline
+        allure 'allure'  // Allure Commandline installation name
+        jdk 'jdk17'      // JDK installation name - required for Allure
     }
     
     environment {
