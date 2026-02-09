@@ -119,28 +119,19 @@ EOF
         stage('Test') {
             steps {
                 container('python') {
-                    echo 'Running tests with assumed AWS credentials...'
-                    // Temporarily commenting out test 1 and 3 to run only test 2
-                    // sh '''
-                    //     # Source AWS credentials for Python tests
-                    //     if [ -f ${WORKSPACE}/.aws-env-vars.sh ]; then
-                    //         . ${WORKSPACE}/.aws-env-vars.sh
-                    //     fi
-                    //     
-                    //     python3 tests/test_run_1.py
-                    // '''
-                    
-                    echo 'Running test_run_2.py...'
+                    echo 'Running tests with Allure reporting...'
                     sh '''
+                        # Source AWS credentials for Python tests
                         . ${WORKSPACE}/.aws-env-vars.sh
-                        python3 tests/test_run_2.py
+                        
+                        # Run pytest with Allure results
+                        python3 -m pytest tests/test_etl_allure.py \
+                            --alluredir=${WORKSPACE}/allure-results \
+                            -v \
+                            --tb=short \
+                            -k "test_empty_address_code" \
+                            || true
                     '''
-                    
-                    // echo 'Running test_run_3.py...'
-                    // sh '''
-                    //     . ${WORKSPACE}/.aws-env-vars.sh
-                    //     python3 tests/test_run_3.py
-                    // '''
                 }
             }
         }
@@ -169,6 +160,16 @@ EOF
     post {
         always {
             echo 'Pipeline finished.'
+            
+            // Publish Allure Report
+            allure([
+                includeProperties: false,
+                jdk: '',
+                properties: [],
+                reportBuildPolicy: 'ALWAYS',
+                results: [[path: 'allure-results']]
+            ])
+            
             container('python') {
                 sh '''
                     # Cleanup sensitive files
