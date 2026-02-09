@@ -28,7 +28,7 @@ spec:
     // Tools must be configured in Jenkins Global Tool Configuration (Manage Jenkins -> Tools)
     tools {
         allure 'allure'  // Allure Commandline installation name
-        jdk 'jdk17'      // JDK installation name - required for Allure
+        jdk 'jdk8'       // JDK installation name - required for Allure
     }
     
     environment {
