@@ -25,6 +25,11 @@ spec:
         }
     }
     
+    // Allure commandline tool - must be configured in Jenkins Global Tool Configuration
+    tools {
+        allure 'allure'  // Name configured in Manage Jenkins -> Tools -> Allure Commandline
+    }
+    
     environment {
         // Only hardcode what's NOT in the Python script
         TARGET_ROLE = "arn:aws:iam::448049811908:role/mtf-pm-dev-jenkins-execution-role"
