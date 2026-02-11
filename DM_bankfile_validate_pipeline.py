@@ -17,11 +17,12 @@ from botocore.exceptions import ClientError
 # --------------------
 # Configuration
 # --------------------
-BUCKET = "mtfpm-dev-s3-mtfdmstaging-us-east-1"  # <-- Update to your actual bucket name
-BUCKET_2 = "mtfpm-dev2-s3-mtfdmstaging-us-east-1"
+# Using Dev2 environment for testing
+BUCKET = "mtfpm-dev2-s3-mtfdmstaging-us-east-1"
+BUCKET_DEV2 = "mtfpm-dev-s3-mtfdmstaging-us-east-1"  # Dev2 (backup)
 
-GLUE_JOB_NAME = "mtfpm-bankfile-validation-error-handling-dev"
-GLUE_JOB_NAME_2 = "load-bank-file-stg-dev2"
+GLUE_JOB_NAME = "load-bank-file-stg-dev2"
+GLUE_JOB_NAME_DEV1 = "mtfpm-bankfile-validation-error-handling-dev"  # Dev1 (backup)
 
 S3_PREFIX = "bankfile/ready"           # Update to the correct prefix
 ARCHIVE_PREFIX = "bankfile/archive/2025/07"
@@ -1624,12 +1625,10 @@ def main():
     parser.add_argument("--min-max-all-columns", action="store_true", help="Test min/max and out-of-bounds for all columns at once")
     args, extra = parser.parse_known_args()
 
-    # Switch environment if Dev2 root flag is set
+    # Switch environment if Dev1 is requested (default is now Dev2)
     if args.dev2:
-        global BUCKET, GLUE_JOB_NAME, ENV_SUFFIX
-        BUCKET = BUCKET_2
-        GLUE_JOB_NAME = GLUE_JOB_NAME_2
-        ENV_SUFFIX = "dev2"
+        # Already using Dev2 as default, this flag is now a no-op
+        pass
 
     # Run all scenarios if requested
     if args.run_all_scenarios:
