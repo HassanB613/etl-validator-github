@@ -131,6 +131,13 @@ EOF
                 container('python') {
                     echo 'Running tests with Allure reporting...'
                     sh '''
+                        # Install ODBC drivers (required for pyodbc/database validation)
+                        apt-get update && apt-get install -y curl apt-transport-https gnupg
+                        curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg
+                        curl https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list
+                        apt-get update
+                        ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc-dev
+                        
                         # Source AWS credentials for Python tests
                         . ${WORKSPACE}/.aws-env-vars.sh
                         
@@ -143,7 +150,7 @@ EOF
                             --alluredir=${WORKSPACE}/allure-results \
                             -v \
                             --tb=short \
-                            -k "test_valid_scenario" \
+                            -k "test_invalid_scenario" \
                             || true
                         
                         # Fix permissions on allure results for jenkins user
