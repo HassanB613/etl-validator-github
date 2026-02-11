@@ -165,12 +165,14 @@ EOF
                 container('python') {
                     echo 'Running SQL tests...'
                     sh '''
-                        # Install ODBC drivers
-                        apt-get update && apt-get install -y curl apt-transport-https gnupg
-                        curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg
-                        curl https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list
-                        apt-get update
-                        ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc-dev
+                        # Install ODBC drivers (skip if already installed)
+                        if ! command -v odbcinst &> /dev/null; then
+                            apt-get update && apt-get install -y curl apt-transport-https gnupg
+                            curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --batch --dearmor -o /usr/share/keyrings/microsoft-prod.gpg
+                            curl https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list
+                            apt-get update
+                            ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc-dev
+                        fi
                         
                         # Source AWS credentials and run tests
                         . ${WORKSPACE}/.aws-env-vars.sh
