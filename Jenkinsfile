@@ -138,12 +138,12 @@ EOF
                         mkdir -p ${WORKSPACE}/allure-results
                         chmod 777 ${WORKSPACE}/allure-results
                         
-                        # Run pytest with Allure results
+                        # Run pytest with Allure results - runs the real ETL validation test
                         python3 -m pytest tests/test_etl_allure.py \
                             --alluredir=${WORKSPACE}/allure-results \
                             -v \
                             --tb=short \
-                            -k "test_empty_address_code" \
+                            -k "test_valid_scenario" \
                             || true
                         
                         # Fix permissions on allure results for jenkins user
