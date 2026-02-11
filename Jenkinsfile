@@ -21,14 +21,18 @@ spec:
     image: amazon/aws-cli:latest
     command: ["cat"]
     tty: true
+  - name: java
+    image: eclipse-temurin:17-jre
+    command: ["/bin/sh", "-c"]
+    args: ["cat"]
+    tty: true
 '''
         }
     }
     
-    // Tools must be configured in Jenkins Global Tool Configuration (Manage Jenkins -> Tools)
+    // Allure tool configured in Jenkins Global Tool Configuration
     tools {
-        allure 'allure'  // Allure Commandline installation name
-        jdk 'jdk17'      // JDK installation name - required for Allure
+        allure 'allure'
     }
     
     environment {
@@ -174,14 +178,17 @@ EOF
         always {
             echo 'Pipeline finished.'
             
-            // Publish Allure Report
-            allure([
-                includeProperties: false,
-                jdk: '',
-                properties: [],
-                reportBuildPolicy: 'ALWAYS',
-                results: [[path: 'allure-results']]
-            ])
+            // Publish Allure Report - run inside java container
+            container('java') {
+                sh 'java -version'
+                allure([
+                    includeProperties: false,
+                    jdk: '',
+                    properties: [],
+                    reportBuildPolicy: 'ALWAYS',
+                    results: [[path: 'allure-results']]
+                ])
+            }
             
             container('python') {
                 sh '''
