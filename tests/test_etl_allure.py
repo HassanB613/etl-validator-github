@@ -95,6 +95,44 @@ class TestETLValidation:
             # Check overall result
             # overall_status: 1 = Passed, 5 = Failed
             assert overall_status == 1, f"Valid scenario failed. Step statuses: {step_status}"
+    
+    @allure.story("Valid Data Processing")
+    @allure.title("Test: Valid bank file - 50 rows successful processing")
+    @allure.severity(allure.severity_level.CRITICAL)
+    def test_valid_scenario_50_rows(self):
+        """
+        Test valid bank file with 50 rows is processed successfully.
+        
+        Steps:
+        1. Generate valid parquet file (all fields populated correctly)
+        2. Upload to S3 ready folder
+        3. Trigger/monitor Glue job
+        4. Verify file removed from ready folder
+        5. Verify file moved to archive folder
+        6. Verify NO error file created in error folder
+        7. Database validation: Verify 0 errors in DB
+        """
+        with allure.step("Running full ETL pipeline for VALID scenario (50 rows)"):
+            step_status, overall_status, archive_path = run_test_scenario("valid", rows=50)
+            
+            # Attach step results to Allure report
+            for step, status in step_status.items():
+                allure.attach(
+                    f"{step}: {status}",
+                    name=step,
+                    attachment_type=allure.attachment_type.TEXT
+                )
+            
+            # Attach archive file info
+            allure.attach(
+                archive_path,
+                name="Archive File Location",
+                attachment_type=allure.attachment_type.TEXT
+            )
+            
+            # Check overall result
+            # overall_status: 1 = Passed, 5 = Failed
+            assert overall_status == 1, f"Valid scenario (50 rows) failed. Step statuses: {step_status}"
 
 
 @allure.epic("ETL Validation Pipeline")

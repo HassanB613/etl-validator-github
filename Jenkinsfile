@@ -145,8 +145,8 @@ EOF
                         mkdir -p ${WORKSPACE}/allure-results
                         chmod 777 ${WORKSPACE}/allure-results
                         
-                        # Run pytest with Allure results - runs both valid and invalid ETL scenarios
-                        python3 -m pytest tests/test_etl_allure.py::TestETLValidation \
+                        # Run pytest with Allure results - runs all 3 tests (valid, invalid, SQL connectivity)
+                        python3 -m pytest tests/test_etl_allure.py \
                             --alluredir=${WORKSPACE}/allure-results \
                             -v \
                             --tb=short
