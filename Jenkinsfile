@@ -165,8 +165,10 @@ EOF
                 container('python') {
                     echo 'Running SQL tests...'
                     sh '''
-                        # Install ODBC drivers (skip if already installed)
-                        if ! command -v odbcinst &> /dev/null; then
+                        # Skip ODBC install if already installed from Test stage
+                        if command -v odbcinst > /dev/null 2>&1; then
+                            echo "ODBC drivers already installed, skipping installation"
+                        else
                             apt-get update && apt-get install -y curl apt-transport-https gnupg
                             curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --batch --dearmor -o /usr/share/keyrings/microsoft-prod.gpg
                             curl https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list
