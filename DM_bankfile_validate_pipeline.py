@@ -617,6 +617,11 @@ def run_test_scenario(file_type, seed=None, rows=50):
                 if os.path.exists(evidence_dir) and not os.listdir(evidence_dir):
                     os.rmdir(evidence_dir)
                     print(f"🗑️ Removed empty evidence directory: {evidence_dir}")
+        
+        # --- Build archive file info for return ---
+        archive_filename = f"mtfdm_{ENV_SUFFIX}_dmbankdata_{timestamp}.parquet"
+        archive_s3_path = f"s3://{BUCKET}/bankfile/archive/{datetime.now().strftime('%Y')}/{datetime.now().strftime('%m')}/{archive_filename}"
+        
         # --- Now report to TestRail ---
         detailed_comment = f"Scenario: {file_type}\n" + "\n".join([f"{step}: {status}" for step, status in step_status.items()])
         overall_status = 5 if any("Failed" in str(status) for status in step_status.values()) else 1
@@ -625,7 +630,7 @@ def run_test_scenario(file_type, seed=None, rows=50):
         else:
             print("✅ Overall Test Result: Passed")
         report_to_testrail(TESTRAIL_TEST_ID, overall_status, detailed_comment)
-        return step_status, overall_status
+        return step_status, overall_status, archive_s3_path
 
 # --- Refactor scenario functions to return file_path and timestamp ---
 def run_missing_column_scenario(column_names, rows=50, timestamp=None):

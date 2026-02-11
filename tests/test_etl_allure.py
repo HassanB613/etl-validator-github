@@ -34,7 +34,7 @@ class TestETLValidation:
         5. Verify file moved to archive folder
         """
         with allure.step("Running full ETL pipeline for VALID scenario"):
-            step_status, overall_status = run_test_scenario("valid", rows=25)
+            step_status, overall_status, archive_path = run_test_scenario("valid", rows=25)
             
             # Attach step results to Allure report
             for step, status in step_status.items():
@@ -43,6 +43,13 @@ class TestETLValidation:
                     name=step,
                     attachment_type=allure.attachment_type.TEXT
                 )
+            
+            # Attach archive file info
+            allure.attach(
+                archive_path,
+                name="Archive File Location",
+                attachment_type=allure.attachment_type.TEXT
+            )
             
             # Check overall result
             # overall_status: 1 = Passed, 5 = Failed
