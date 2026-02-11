@@ -19,22 +19,25 @@ from DM_bankfile_validate_pipeline import run_test_scenario
 @allure.feature("Bank File Processing - Dev2")
 class TestETLValidation:
     
-    @allure.story("Valid Data Processing")
-    @allure.title("Test: Valid bank file - full ETL pipeline")
+    @allure.story("Invalid Data Processing")
+    @allure.title("Test: Invalid bank file - error handling with DB validation")
     @allure.severity(allure.severity_level.CRITICAL)
-    def test_valid_scenario(self):
+    def test_invalid_scenario(self):
         """
-        Test valid bank file with 25 rows processes correctly through full ETL pipeline.
+        Test invalid bank file with 25 rows triggers error handling and DB validation.
         
         Steps:
-        1. Generate valid parquet file with 25 rows
+        1. Generate invalid parquet file (blanked OrganizationTIN and ContactEmail)
         2. Upload to S3 ready folder
         3. Trigger/monitor Glue job
         4. Verify file removed from ready folder
         5. Verify file moved to archive folder
+        6. Verify error file created in error folder
+        7. Verify error file exists in error folder
+        8. Database validation: Compare DB error count with CSV row count
         """
-        with allure.step("Running full ETL pipeline for VALID scenario"):
-            step_status, overall_status, archive_path = run_test_scenario("valid", rows=25)
+        with allure.step("Running full ETL pipeline for INVALID scenario"):
+            step_status, overall_status, archive_path = run_test_scenario("invalid", rows=25)
             
             # Attach step results to Allure report
             for step, status in step_status.items():
@@ -53,7 +56,7 @@ class TestETLValidation:
             
             # Check overall result
             # overall_status: 1 = Passed, 5 = Failed
-            assert overall_status == 1, f"Valid scenario failed. Step statuses: {step_status}"
+            assert overall_status == 1, f"Invalid scenario failed. Step statuses: {step_status}"
 
 
 @allure.epic("ETL Validation Pipeline")

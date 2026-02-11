@@ -13,6 +13,7 @@ import threading
 import random  # Add this import for random choice
 import re  # Add this import for regex
 from botocore.exceptions import ClientError
+import pyodbc  # Add this for SQL Server database validation
 
 # --------------------
 # Configuration
@@ -33,6 +34,29 @@ ENV_SUFFIX = "dev2"
 
 s3 = boto3.client("s3")
 glue = boto3.client("glue", region_name="us-east-1")
+
+# Load SQL Server configuration for database validation
+sql_config = configparser.ConfigParser()
+sql_config_paths = [
+    "sqlUtils/sqlconfig.ini",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "sqlUtils/sqlconfig.ini")
+]
+SQL_SERVER = ""
+SQL_DATABASE = ""
+SQL_USERNAME = ""
+SQL_PASSWORD = ""
+for sql_config_path in sql_config_paths:
+    if os.path.exists(sql_config_path):
+        sql_config.read(sql_config_path)
+        if "Credentials" in sql_config:
+            SQL_SERVER = sql_config["Credentials"].get("Server", "")
+            SQL_DATABASE = sql_config["Credentials"].get("Database", "")
+            SQL_USERNAME = sql_config["Credentials"].get("UserName", "")
+            SQL_PASSWORD = sql_config["Credentials"].get("Password", "")
+            print(f"✅ SQL Server config loaded: {SQL_SERVER}/{SQL_DATABASE}")
+        break
+else:
+    print("⚠️ sqlconfig.ini not found. Database validation will be skipped.")
 
 # Load TestRail configuration
 config = configparser.ConfigParser()
@@ -123,6 +147,193 @@ def add_case_to_run(run_id, case_id):
     else:
         print(f"❌ Failed to add test case {case_id} to run {run_id}: {response.text}")
         return False
+
+# --------------------
+# SQL Server Database Validation Functions
+# --------------------
+def get_sql_connection():
+    """
+    Create a connection to SQL Server using pyodbc.
+    Returns connection object or None if connection fails.
+    """
+    if not SQL_SERVER or not SQL_DATABASE:
+        print("⚠️ SQL Server not configured. Skipping database validation.")
+        return None
+    try:
+        conn_str = (
+            f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+            f"SERVER={SQL_SERVER};"
+            f"DATABASE={SQL_DATABASE};"
+            f"UID={SQL_USERNAME};"
+            f"PWD={SQL_PASSWORD};"
+            f"TrustServerCertificate=yes;"
+        )
+        conn = pyodbc.connect(conn_str, timeout=30)
+        print(f"✅ Connected to SQL Server: {SQL_DATABASE}")
+        return conn
+    except Exception as e:
+        print(f"❌ Failed to connect to SQL Server: {e}")
+        return None
+
+def get_ins_batch_id_from_job_id(glue_run_id):
+    """
+    Query JOB_CONTROL table to get BATCH_ID for a given Glue Job Run ID.
+    The BATCH_ID value is then used as INS_BATCH_ID in PAYEE_ERROR_STG.
+    Returns BATCH_ID or None if not found.
+    """
+    conn = get_sql_connection()
+    if not conn:
+        return None
+    try:
+        cursor = conn.cursor()
+        query = """
+            SELECT BATCH_ID 
+            FROM [MTFDM_STG].[JOB_CONTROL] 
+            WHERE JOB_ID = ?
+        """
+        print(f"🔍 Looking up BATCH_ID for Glue Job: {glue_run_id}")
+        cursor.execute(query, (glue_run_id,))
+        row = cursor.fetchone()
+        if row:
+            batch_id = row[0]
+            print(f"✅ Found BATCH_ID: {batch_id}")
+            return batch_id
+        else:
+            print(f"❌ No JOB_CONTROL record found for JOB_ID: {glue_run_id}")
+            return None
+    except Exception as e:
+        print(f"❌ Error querying JOB_CONTROL: {e}")
+        return None
+    finally:
+        conn.close()
+
+def get_error_count_from_db(ins_batch_id):
+    """
+    Query PAYEE_ERROR_STG table to count error rows for a given INS_BATCH_ID.
+    The INS_BATCH_ID value comes from BATCH_ID in JOB_CONTROL table.
+    Returns count or None if query fails.
+    """
+    conn = get_sql_connection()
+    if not conn:
+        return None
+    try:
+        cursor = conn.cursor()
+        query = """
+            SELECT COUNT(*) AS error_count 
+            FROM [MTFDM_STG].[PAYEE_ERROR_STG] 
+            WHERE INS_BATCH_ID = ?
+        """
+        print(f"🔍 Counting errors in PAYEE_ERROR_STG for INS_BATCH_ID: {ins_batch_id}")
+        cursor.execute(query, (ins_batch_id,))
+        row = cursor.fetchone()
+        if row:
+            error_count = row[0]
+            print(f"✅ Found {error_count} error rows in database")
+            return error_count
+        return 0
+    except Exception as e:
+        print(f"❌ Error querying PAYEE_ERROR_STG: {e}")
+        return None
+    finally:
+        conn.close()
+
+def download_latest_error_csv_from_s3(local_evidence_dir):
+    """
+    Download the most recent error CSV file from S3 error folder (by LastModified date).
+    Returns (local_file_path, row_count) or (None, 0) if not found.
+    """
+    try:
+        result = s3.list_objects_v2(Bucket=BUCKET, Prefix=ERROR_CSV_PREFIX)
+        contents = result.get("Contents", [])
+        
+        # Filter to only CSV files and sort by LastModified descending
+        csv_files = [obj for obj in contents if obj["Key"].endswith(".csv")]
+        if not csv_files:
+            print(f"❌ No CSV files found in s3://{BUCKET}/{ERROR_CSV_PREFIX}")
+            return None, 0
+        
+        # Sort by LastModified to get the most recent file
+        csv_files.sort(key=lambda x: x["LastModified"], reverse=True)
+        latest_file = csv_files[0]
+        
+        print(f"📥 Latest error file: {latest_file['Key']} (Modified: {latest_file['LastModified']})")
+        
+        # Download the file
+        os.makedirs(local_evidence_dir, exist_ok=True)
+        local_path = os.path.join(local_evidence_dir, os.path.basename(latest_file["Key"]))
+        s3.download_file(BUCKET, latest_file["Key"], local_path)
+        print(f"✅ Downloaded latest error file to: {local_path}")
+        
+        # Count rows in CSV (excluding header)
+        try:
+            df = pd.read_csv(local_path)
+            row_count = len(df)
+            print(f"✅ Error CSV contains {row_count} data rows")
+            return local_path, row_count
+        except Exception as e:
+            print(f"⚠️ Could not read CSV to count rows: {e}")
+            return local_path, 0
+            
+    except Exception as e:
+        print(f"❌ Failed to download latest error CSV: {e}")
+        return None, 0
+
+def validate_error_file_with_database(glue_run_id, local_evidence_dir):
+    """
+    Full database validation workflow for error file testing:
+    1. Get BATCH_ID from JOB_CONTROL using Glue Run ID (JOB_ID column)
+    2. Use that BATCH_ID to count error rows in PAYEE_ERROR_STG (INS_BATCH_ID column)
+    3. Download latest error CSV from S3
+    4. Compare row counts
+    
+    Returns (passed, details_dict) where passed is True if counts match.
+    """
+    print("\n>>> Step 8: Database Error File Validation")
+    details = {
+        "glue_run_id": glue_run_id,
+        "ins_batch_id": None,
+        "db_error_count": None,
+        "csv_error_count": None,
+        "csv_file": None,
+        "match": False
+    }
+    
+    if not glue_run_id:
+        print("⚠️ No Glue Run ID provided. Skipping database validation.")
+        return False, details
+    
+    # Step 1: Get INS_BATCH_ID from JOB_CONTROL
+    ins_batch_id = get_ins_batch_id_from_job_id(glue_run_id)
+    details["ins_batch_id"] = ins_batch_id
+    if not ins_batch_id:
+        print("❌ Could not retrieve INS_BATCH_ID. Database validation failed.")
+        return False, details
+    
+    # Step 2: Count error rows in database
+    db_error_count = get_error_count_from_db(ins_batch_id)
+    details["db_error_count"] = db_error_count
+    if db_error_count is None:
+        print("❌ Could not count errors in database. Validation failed.")
+        return False, details
+    
+    # Step 3: Download latest error CSV from S3
+    csv_path, csv_error_count = download_latest_error_csv_from_s3(local_evidence_dir)
+    details["csv_file"] = csv_path
+    details["csv_error_count"] = csv_error_count
+    
+    if not csv_path:
+        print("❌ Could not download error CSV. Validation failed.")
+        return False, details
+    
+    # Step 4: Compare counts
+    if db_error_count == csv_error_count:
+        print(f"✅ Row counts MATCH: DB={db_error_count}, CSV={csv_error_count}")
+        details["match"] = True
+        return True, details
+    else:
+        print(f"❌ Row counts MISMATCH: DB={db_error_count}, CSV={csv_error_count}")
+        details["match"] = False
+        return False, details
 
 # --------------------
 # Step 1: Generate test files
@@ -277,6 +488,8 @@ def wait_for_glue_success(job_name, timeout=600):
     """
     Wait for Glue job to succeed. First checks if job is already running (auto-triggered by S3),
     if so, monitors that run. Otherwise starts a new run.
+    
+    Returns tuple: (success: bool, run_id: str or None)
     """
     run_id = None
     
@@ -329,11 +542,11 @@ def wait_for_glue_success(job_name, timeout=600):
                     time.sleep(wait_time)
                     continue
                 print(f"❌ Error starting Glue job: {e}")
-                return False
+                return False, None
     
     if not run_id:
         print("❌ Could not start or find Glue job.")
-        return False
+        return False, None
 
     # Monitor the job run
     start_time = time.time()
@@ -345,13 +558,13 @@ def wait_for_glue_success(job_name, timeout=600):
                 if status == "SUCCEEDED":
                     print("✅ Glue job succeeded. Waiting 45 seconds for S3 propagation...")
                     time.sleep(45)
-                return status == "SUCCEEDED"
+                return status == "SUCCEEDED", run_id
         except Exception as e:
             print(f"⚠️ Error checking job status: {e}")
         time.sleep(10)
 
     print("❌ Timeout waiting for Glue job to complete.")
-    return False
+    return False, run_id
 
 # --------------------
 # Step 4: Validate S3 Outputs
@@ -507,9 +720,11 @@ def run_test_scenario(file_type, seed=None, rows=50):
         "Step 4": "Passed",
         "Step 5": "Passed",
         "Step 6": "Passed",
-        "Step 7": "Passed"
+        "Step 7": "Passed",
+        "Step 8": "Skipped"  # Database validation (only for invalid/error scenarios)
     }
     file_path = None  # Initialize file_path
+    glue_run_id = None  # Track Glue run ID for database validation
     try:
         print(f"\n>>> Running test for scenario: {file_type.upper()}")
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -527,7 +742,7 @@ def run_test_scenario(file_type, seed=None, rows=50):
         print(f"✅ {file_type.capitalize()} file is present in S3.")
 
         print(">>> Step 4: Trigger and monitor Glue job")
-        glue_job_success = wait_for_glue_success(GLUE_JOB_NAME)
+        glue_job_success, glue_run_id = wait_for_glue_success(GLUE_JOB_NAME)
         if not glue_job_success:
             step_status["Step 4"] = "Failed"
             raise Exception("❌ Glue job failed.")
@@ -585,6 +800,18 @@ def run_test_scenario(file_type, seed=None, rows=50):
         except AssertionError as e:
             step_status["Step 7"] = f"Failed: {str(e)}"
             print(str(e))
+
+        # Step 8: Database validation (only for invalid/error scenarios)
+        if not is_valid and glue_run_id:
+            test_output_dir = os.path.dirname(file_path) if file_path else "./test_output"
+            evidence_dir = os.path.join(test_output_dir, "test evidence s3 ready folder")
+            db_validation_passed, db_details = validate_error_file_with_database(glue_run_id, evidence_dir)
+            if db_validation_passed:
+                step_status["Step 8"] = f"Passed (DB={db_details['db_error_count']}, CSV={db_details['csv_error_count']})"
+            else:
+                step_status["Step 8"] = f"Failed: DB={db_details.get('db_error_count', 'N/A')}, CSV={db_details.get('csv_error_count', 'N/A')}"
+        elif is_valid:
+            step_status["Step 8"] = "Skipped (valid scenario - no errors expected)"
 
         print("\nDebugging Step Statuses:")
         for step, status in step_status.items():
@@ -1144,9 +1371,11 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
         "Step 4": "Pending",
         "Step 5": "Pending",
         "Step 6": "Pending",
-        "Step 7": "Pending"
+        "Step 7": "Pending",
+        "Step 8": "Pending"  # Database validation for error file testing
     }
     file_type = scenario_name
+    glue_run_id = None  # Track Glue run ID for database validation
     try:
         print(f"\n>>> Running full ETL pipeline for scenario: {scenario_name}")
         print(">>> Step 3: Validate S3 outputs before triggering Glue job")
@@ -1156,7 +1385,7 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
         step_status["Step 3"] = "Passed"
 
         print(">>> Step 4: Trigger and monitor Glue job")
-        glue_job_success = wait_for_glue_success(GLUE_JOB_NAME)
+        glue_job_success, glue_run_id = wait_for_glue_success(GLUE_JOB_NAME)
         if not glue_job_success:
             step_status["Step 4"] = "Failed"
             raise Exception("❌ Glue job failed.")
@@ -1196,6 +1425,18 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
         except AssertionError as e:
             step_status["Step 7"] = f"Failed: {str(e)}"
             print(str(e))
+
+        # Step 8: Database validation for error file testing
+        if glue_run_id:
+            test_output_dir = os.path.dirname(file_path) if file_path else "./test_output"
+            evidence_dir = os.path.join(test_output_dir, "test evidence s3 ready folder")
+            db_validation_passed, db_details = validate_error_file_with_database(glue_run_id, evidence_dir)
+            if db_validation_passed:
+                step_status["Step 8"] = f"Passed (DB={db_details['db_error_count']}, CSV={db_details['csv_error_count']})"
+            else:
+                step_status["Step 8"] = f"Failed: DB={db_details.get('db_error_count', 'N/A')}, CSV={db_details.get('csv_error_count', 'N/A')}"
+        else:
+            step_status["Step 8"] = "Skipped (no Glue run ID available)"
 
     except Exception as e:
         print(str(e))
