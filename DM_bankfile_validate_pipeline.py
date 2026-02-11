@@ -793,10 +793,9 @@ def run_test_scenario(file_type, seed=None, rows=50):
                 assert not expected_error_file, f"❌ Unexpected error file found for valid scenario: {expected_error_file}"
                 print(f"✅ No error file found for this timestamp (as expected for valid scenario).")
             else:
-                # For invalid scenario, check for the specific expected error file
-                expected_error_file = check_expected_error_file_exists(ERROR_CSV_PREFIX, timestamp)
-                assert expected_error_file, f"❌ Expected error file not found: mtfdm_{ENV_SUFFIX}_dmbankerrorfile_{timestamp}.csv"
-                print(f"✅ Found expected error file: {expected_error_file}")
+                # For invalid scenario, skip S3 error file check - Step 8 DB validation handles this
+                step_status["Step 7"] = "Skipped (invalid scenario - DB validation in Step 8)"
+                print(f"ℹ️ Skipping S3 error file check for invalid scenario (using DB validation in Step 8)")
         except AssertionError as e:
             step_status["Step 7"] = f"Failed: {str(e)}"
             print(str(e))
