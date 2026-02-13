@@ -114,9 +114,7 @@ def zip_allure_report(allure_path):
     """
     Zip the Allure report folder for offline viewing.
     Returns the path to the zip file, or None if failed.
-    Includes a VIEW_REPORT.bat file for easy viewing by non-technical users.
     """
-    import shutil
     import zipfile
     
     if not allure_path or not os.path.exists(allure_path):
@@ -130,24 +128,6 @@ def zip_allure_report(allure_path):
         
         print(f"📦 Zipping Allure report to: {zip_path}")
         
-        # Create a batch file for easy viewing (non-tech users just double-click this)
-        view_bat_content = '''@echo off
-echo ============================================
-echo    Opening Allure Test Report
-echo ============================================
-echo.
-echo Starting local web server...
-echo (Keep this window open while viewing the report)
-echo.
-echo Report will open in your browser at: http://localhost:8000
-echo.
-echo To close: Press Ctrl+C or close this window
-echo ============================================
-start http://localhost:8000
-python -m http.server 8000
-pause
-'''
-        
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             # Add all report files
             for root, dirs, files in os.walk(allure_path):
@@ -155,31 +135,6 @@ pause
                     file_path = os.path.join(root, file)
                     arcname = os.path.relpath(file_path, allure_path)
                     zipf.write(file_path, arcname)
-            
-            # Add the VIEW_REPORT.bat file
-            zipf.writestr("VIEW_REPORT.bat", view_bat_content)
-            
-            # Add a README for instructions
-            readme_content = '''ALLURE TEST REPORT - HOW TO VIEW
-=================================
-
-EASY WAY (Windows):
-1. Extract this entire zip folder
-2. Double-click "VIEW_REPORT.bat"
-3. Report opens in your browser automatically
-4. Keep the black window open while viewing
-5. Close the black window when done
-
-MANUAL WAY:
-1. Extract this zip folder
-2. Open Command Prompt in this folder
-3. Run: python -m http.server 8000
-4. Open browser to: http://localhost:8000
-
-NOTE: You need Python installed on your computer.
-Download from: https://www.python.org/downloads/
-'''
-            zipf.writestr("README.txt", readme_content)
         
         zip_size_mb = os.path.getsize(zip_path) / (1024 * 1024)
         print(f"✅ Allure report zipped: {zip_filename} ({zip_size_mb:.2f} MB)")
