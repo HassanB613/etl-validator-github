@@ -199,6 +199,64 @@ EOF
                 ])
             }
             
+            // Upload Allure report zip to TestRail (after Allure generates the report)
+            container('python') {
+                sh '''
+                    echo "Checking for Allure report to upload to TestRail..."
+                    
+                    # Source AWS credentials if needed
+                    if [ -f ${WORKSPACE}/.aws-env-vars.sh ]; then
+                        . ${WORKSPACE}/.aws-env-vars.sh
+                    fi
+                    
+                    # Run Python script to upload Allure report to TestRail
+                    python3 -c "
+import os
+import sys
+sys.path.insert(0, '${WORKSPACE}')
+from DM_bankfile_validate_pipeline import (
+    get_allure_report_path, 
+    zip_allure_report, 
+    upload_attachment_to_testrail,
+    TESTRAIL_URL,
+    TESTRAIL_USERNAME,
+    TESTRAIL_API_KEY,
+    TESTRAIL_TEST_ID
+)
+import requests
+
+# Check for Allure report
+allure_path = '${WORKSPACE}/allure-report'
+if os.path.exists(allure_path):
+    print(f'📁 Found Allure report at: {allure_path}')
+    
+    # Zip it
+    zip_path = zip_allure_report(allure_path)
+    if zip_path:
+        # Get the most recent result ID for this test
+        # First, get all results for this test
+        url = f'{TESTRAIL_URL}index.php?/api/v2/get_results/{TESTRAIL_TEST_ID}&limit=1'
+        response = requests.get(url, auth=(TESTRAIL_USERNAME, TESTRAIL_API_KEY))
+        if response.status_code == 200:
+            results = response.json().get('results', [])
+            if results:
+                result_id = results[0].get('id')
+                print(f'📎 Uploading Allure report to TestRail result ID: {result_id}')
+                upload_attachment_to_testrail(result_id, zip_path)
+                os.remove(zip_path)
+                print('✅ Allure report uploaded to TestRail!')
+            else:
+                print('⚠️ No TestRail results found to attach to')
+        else:
+            print(f'❌ Failed to get TestRail results: {response.text}')
+    else:
+        print('❌ Failed to zip Allure report')
+else:
+    print(f'ℹ️ Allure report not found at {allure_path}')
+"
+                '''
+            }
+            
             container('python') {
                 sh '''
                     # Cleanup sensitive files
