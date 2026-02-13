@@ -184,9 +184,15 @@ def report_to_testrail(test_id, status, comment):
     # Add Jenkins build info and Allure report link to comment if available
     build_url = os.environ.get("BUILD_URL")
     build_number = os.environ.get("BUILD_NUMBER")
+    print(f"🔍 DEBUG: BUILD_URL={build_url}, BUILD_NUMBER={build_number}")
     if build_url and build_number:
         allure_url = f"{build_url}allure/"
         comment = f"{comment}\n\n🔗 Jenkins Build #{build_number}: {build_url}\n📊 Allure Report: {allure_url}"
+        print(f"🔍 DEBUG: Added links to comment")
+    else:
+        print(f"⚠️ DEBUG: BUILD_URL or BUILD_NUMBER not set - links not added")
+    
+    print(f"🔍 DEBUG: Final comment being sent:\n{comment}")
     
     url = f"{TESTRAIL_URL}index.php?/api/v2/add_result/{test_id}"
     headers = {"Content-Type": "application/json"}
