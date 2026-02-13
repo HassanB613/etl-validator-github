@@ -89,9 +89,96 @@ else:
 # --------------------
 # TestRail Configuration
 # --------------------
+def get_allure_report_path():
+    """
+    Find the Allure report directory in Jenkins workspace.
+    Returns the path if found, None otherwise.
+    """
+    # Common Allure report locations in Jenkins
+    possible_paths = [
+        os.path.join(os.environ.get("WORKSPACE", "."), "allure-report"),
+        "./allure-report",
+        "../allure-report",
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "allure-report")
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path) and os.path.isdir(path):
+            print(f"📁 Found Allure report at: {path}")
+            return path
+    
+    print("ℹ️ Allure report directory not found")
+    return None
+
+def zip_allure_report(allure_path):
+    """
+    Zip the Allure report folder for offline viewing.
+    Returns the path to the zip file, or None if failed.
+    """
+    import shutil
+    import zipfile
+    
+    if not allure_path or not os.path.exists(allure_path):
+        return None
+    
+    try:
+        # Create zip file with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        zip_filename = f"allure_report_{timestamp}.zip"
+        zip_path = os.path.join(os.path.dirname(allure_path), zip_filename)
+        
+        print(f"📦 Zipping Allure report to: {zip_path}")
+        
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root, dirs, files in os.walk(allure_path):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    arcname = os.path.relpath(file_path, allure_path)
+                    zipf.write(file_path, arcname)
+        
+        zip_size_mb = os.path.getsize(zip_path) / (1024 * 1024)
+        print(f"✅ Allure report zipped: {zip_filename} ({zip_size_mb:.2f} MB)")
+        return zip_path
+    except Exception as e:
+        print(f"❌ Failed to zip Allure report: {e}")
+        return None
+
+def upload_attachment_to_testrail(result_id, file_path):
+    """
+    Upload a file attachment to a TestRail test result.
+    :param result_id: The TestRail result ID (returned from add_result API)
+    :param file_path: Path to the file to upload
+    """
+    if not os.path.exists(file_path):
+        print(f"❌ Attachment file not found: {file_path}")
+        return False
+    
+    url = f"{TESTRAIL_URL}index.php?/api/v2/add_attachment_to_result/{result_id}"
+    
+    try:
+        with open(file_path, 'rb') as f:
+            # TestRail expects multipart/form-data for file uploads
+            files = {'attachment': (os.path.basename(file_path), f)}
+            response = requests.post(
+                url, 
+                files=files, 
+                auth=(TESTRAIL_USERNAME, TESTRAIL_API_KEY)
+            )
+        
+        if response.status_code == 200:
+            print(f"✅ Attachment uploaded to TestRail: {os.path.basename(file_path)}")
+            return True
+        else:
+            print(f"❌ Failed to upload attachment: {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Error uploading attachment: {e}")
+        return False
+
 def report_to_testrail(test_id, status, comment):
     """
     Report test results to TestRail using test ID.
+    Automatically attaches Allure report zip when running in Jenkins.
     :param test_id: TestRail test ID
     :param status: Test result status (1=Passed, 2=Blocked, 3=Untested, 4=Retest, 5=Failed)
     :param comment: Additional comments for the test result
@@ -99,6 +186,13 @@ def report_to_testrail(test_id, status, comment):
     if not TESTRAIL_URL or not TESTRAIL_API_KEY:
         print("⚠️ TestRail not configured. Skipping test result reporting.")
         return
+    
+    # Add Jenkins build info to comment if available
+    build_url = os.environ.get("BUILD_URL")
+    build_number = os.environ.get("BUILD_NUMBER")
+    if build_url and build_number:
+        comment = f"{comment}\n\n🔗 Jenkins Build #{build_number}: {build_url}"
+    
     url = f"{TESTRAIL_URL}index.php?/api/v2/add_result/{test_id}"
     headers = {"Content-Type": "application/json"}
     payload = {
@@ -106,8 +200,25 @@ def report_to_testrail(test_id, status, comment):
         "comment": comment
     }
     response = requests.post(url, json=payload, auth=(TESTRAIL_USERNAME, TESTRAIL_API_KEY))
+    
     if response.status_code == 200:
         print(f"✅ Test result reported to TestRail for test {test_id}")
+        result_data = response.json()
+        result_id = result_data.get("id")
+        
+        # Try to attach Allure report if running in Jenkins
+        if result_id and os.environ.get("BUILD_URL"):
+            allure_path = get_allure_report_path()
+            if allure_path:
+                zip_path = zip_allure_report(allure_path)
+                if zip_path:
+                    upload_attachment_to_testrail(result_id, zip_path)
+                    # Clean up zip file after upload
+                    try:
+                        os.remove(zip_path)
+                        print(f"🗑️ Cleaned up temporary zip file")
+                    except:
+                        pass
     else:
         print(f"❌ Failed to report test result to TestRail: {response.text}")
 
