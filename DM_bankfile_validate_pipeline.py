@@ -94,7 +94,6 @@ def get_allure_report_path():
     Find the Allure report directory in Jenkins workspace.
     Returns the path if found, None otherwise.
     """
-    # Common Allure report locations in Jenkins
     possible_paths = [
         os.path.join(os.environ.get("WORKSPACE", "."), "allure-report"),
         "./allure-report",
@@ -112,7 +111,7 @@ def get_allure_report_path():
 
 def zip_allure_report(allure_path):
     """
-    Zip the Allure report folder for offline viewing.
+    Zip the Allure report folder for attachment to TestRail.
     Returns the path to the zip file, or None if failed.
     """
     import zipfile
@@ -121,7 +120,6 @@ def zip_allure_report(allure_path):
         return None
     
     try:
-        # Create zip file with timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         zip_filename = f"allure_report_{timestamp}.zip"
         zip_path = os.path.join(os.path.dirname(allure_path), zip_filename)
@@ -129,7 +127,6 @@ def zip_allure_report(allure_path):
         print(f"📦 Zipping Allure report to: {zip_path}")
         
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            # Add all report files
             for root, dirs, files in os.walk(allure_path):
                 for file in files:
                     file_path = os.path.join(root, file)
@@ -146,8 +143,6 @@ def zip_allure_report(allure_path):
 def upload_attachment_to_testrail(result_id, file_path):
     """
     Upload a file attachment to a TestRail test result.
-    :param result_id: The TestRail result ID (returned from add_result API)
-    :param file_path: Path to the file to upload
     """
     if not os.path.exists(file_path):
         print(f"❌ Attachment file not found: {file_path}")
@@ -157,7 +152,6 @@ def upload_attachment_to_testrail(result_id, file_path):
     
     try:
         with open(file_path, 'rb') as f:
-            # TestRail expects multipart/form-data for file uploads
             files = {'attachment': (os.path.basename(file_path), f)}
             response = requests.post(
                 url, 
@@ -178,7 +172,7 @@ def upload_attachment_to_testrail(result_id, file_path):
 def report_to_testrail(test_id, status, comment):
     """
     Report test results to TestRail using test ID.
-    Automatically attaches Allure report zip when running in Jenkins.
+    Includes link to Allure report and attaches zip when running in Jenkins.
     :param test_id: TestRail test ID
     :param status: Test result status (1=Passed, 2=Blocked, 3=Untested, 4=Retest, 5=Failed)
     :param comment: Additional comments for the test result
@@ -187,11 +181,12 @@ def report_to_testrail(test_id, status, comment):
         print("⚠️ TestRail not configured. Skipping test result reporting.")
         return
     
-    # Add Jenkins build info to comment if available
+    # Add Jenkins build info and Allure report link to comment if available
     build_url = os.environ.get("BUILD_URL")
     build_number = os.environ.get("BUILD_NUMBER")
     if build_url and build_number:
-        comment = f"{comment}\n\n🔗 Jenkins Build #{build_number}: {build_url}"
+        allure_url = f"{build_url}allure/"
+        comment = f"{comment}\n\n🔗 Jenkins Build #{build_number}: {build_url}\n📊 Allure Report: {allure_url}"
     
     url = f"{TESTRAIL_URL}index.php?/api/v2/add_result/{test_id}"
     headers = {"Content-Type": "application/json"}
@@ -206,14 +201,13 @@ def report_to_testrail(test_id, status, comment):
         result_data = response.json()
         result_id = result_data.get("id")
         
-        # Try to attach Allure report if running in Jenkins
+        # Try to attach Allure report zip if running in Jenkins
         if result_id and os.environ.get("BUILD_URL"):
             allure_path = get_allure_report_path()
             if allure_path:
                 zip_path = zip_allure_report(allure_path)
                 if zip_path:
                     upload_attachment_to_testrail(result_id, zip_path)
-                    # Clean up zip file after upload
                     try:
                         os.remove(zip_path)
                         print(f"🗑️ Cleaned up temporary zip file")
