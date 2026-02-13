@@ -234,12 +234,12 @@ if os.path.exists(allure_path):
     zip_path = zip_allure_report(allure_path)
     if zip_path:
         # Get the most recent result ID for this test
-        # First, get all results for this test
+        # TestRail API returns a list directly, not wrapped in a dict
         url = f'{TESTRAIL_URL}index.php?/api/v2/get_results/{TESTRAIL_TEST_ID}&limit=1'
         response = requests.get(url, auth=(TESTRAIL_USERNAME, TESTRAIL_API_KEY))
         if response.status_code == 200:
-            results = response.json().get('results', [])
-            if results:
+            results = response.json()  # Returns a list directly
+            if results and len(results) > 0:
                 result_id = results[0].get('id')
                 print(f'📎 Uploading Allure report to TestRail result ID: {result_id}')
                 upload_attachment_to_testrail(result_id, zip_path)
