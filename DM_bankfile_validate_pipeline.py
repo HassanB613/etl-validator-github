@@ -77,14 +77,12 @@ if config_found and "TestRail" in config:
     TESTRAIL_URL = config["TestRail"]["url"]
     TESTRAIL_USERNAME = config["TestRail"]["username"]
     TESTRAIL_API_KEY = config["TestRail"]["api_key"]
-    TESTRAIL_RUN_ID = int(config["TestRail"]["run_id"])
     TESTRAIL_TEST_ID = int(config["TestRail"]["test_id"])
 else:
     # Default values if config not found
     TESTRAIL_URL = ""
     TESTRAIL_USERNAME = ""
     TESTRAIL_API_KEY = ""
-    TESTRAIL_RUN_ID = 0
     TESTRAIL_TEST_ID = 0
     print("Warning: testrail_config.ini not found. TestRail reporting will be skipped.")
 
@@ -93,8 +91,8 @@ else:
 # --------------------
 def report_to_testrail(test_id, status, comment):
     """
-    Report test results to TestRail.
-    :param test_id: TestRail test ID (not test case ID)
+    Report test results to TestRail using test ID.
+    :param test_id: TestRail test ID
     :param status: Test result status (1=Passed, 2=Blocked, 3=Untested, 4=Retest, 5=Failed)
     :param comment: Additional comments for the test result
     """
