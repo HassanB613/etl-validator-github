@@ -37,7 +37,7 @@ spec:
     
     environment {
         // Only hardcode what's NOT in the Python script
-        TARGET_ROLE = "arn:aws:iam::448049811908:role/mtf-pm-dev-jenkins-execution-role"
+        TARGET_ROLE = "arn:aws:iam::448049811908:role/mtfpm-test-automation-execution-role"
         AWS_REGION = "us-east-1"
     }
     
