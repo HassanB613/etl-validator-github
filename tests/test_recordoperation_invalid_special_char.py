@@ -14,7 +14,18 @@ Injects special characters ($\) into the RecordOperation column to test ETL vali
 @allure.title('Test RecordOperation Column with Invalid Special Characters')
 class TestRecordOperationValidation:
     
-    @allure.description('Tests ETL pipeline validation by injecting special character ($) into RecordOperation column')
+    @allure.description("""
+    Test that pipeline rejects invalid special characters in RecordOperation column.
+    
+    Steps:
+    1. Generate invalid parquet file with special character ($) in RecordOperation
+    2. Upload to S3 ready folder
+    3. Trigger/monitor Glue job
+    4. Verify file removed from ready folder
+    5. Verify file moved to archive folder
+    6. Verify error file created in error folder
+    7. Database validation: Compare DB error count with CSV row count
+    """)
     @allure.severity(allure.severity_level.CRITICAL)
     def test_recordoperation_invalid_special_char(self):
         """
