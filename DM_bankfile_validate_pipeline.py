@@ -348,30 +348,29 @@ def get_error_count_from_db(ins_batch_id):
 
 def download_latest_error_csv_from_s3(local_evidence_dir):
     """
-    Download the most recent error CSV file from S3 error folder (by LastModified date).
+    Download the latest error CSV file from S3 error folder by LastModified date.
     Returns (local_file_path, row_count) or (None, 0) if not found.
     """
     try:
         result = s3.list_objects_v2(Bucket=BUCKET, Prefix=ERROR_CSV_PREFIX)
         contents = result.get("Contents", [])
         
-        # Filter to only CSV files and sort by LastModified descending
+        # Filter to only CSV files
         csv_files = [obj for obj in contents if obj["Key"].endswith(".csv")]
         if not csv_files:
             print(f"❌ No CSV files found in s3://{BUCKET}/{ERROR_CSV_PREFIX}")
             return None, 0
         
-        # Sort by LastModified to get the most recent file
+        # Get the latest file by LastModified date
         csv_files.sort(key=lambda x: x["LastModified"], reverse=True)
-        latest_file = csv_files[0]
-        
-        print(f"📥 Latest error file: {latest_file['Key']} (Modified: {latest_file['LastModified']})")
+        target_file = csv_files[0]
+        print(f"📥 Downloading latest error file: {target_file['Key']} (Modified: {target_file['LastModified']})")
         
         # Download the file
         os.makedirs(local_evidence_dir, exist_ok=True)
-        local_path = os.path.join(local_evidence_dir, os.path.basename(latest_file["Key"]))
-        s3.download_file(BUCKET, latest_file["Key"], local_path)
-        print(f"✅ Downloaded latest error file to: {local_path}")
+        local_path = os.path.join(local_evidence_dir, os.path.basename(target_file["Key"]))
+        s3.download_file(BUCKET, target_file["Key"], local_path)
+        print(f"✅ Downloaded error file to: {local_path}")
         
         # Count rows in CSV (excluding header)
         try:
