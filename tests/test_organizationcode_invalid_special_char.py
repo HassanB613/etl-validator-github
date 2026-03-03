@@ -68,5 +68,8 @@ class TestOrganizationCodeValidation:
             if pipe_result.stderr:
                 allure.attach(pipe_result.stderr, "Pipeline Errors", allure.attachment_type.TEXT)
             
-            # Pipeline should succeed (return 0) but detect errors via validation
-            assert pipe_result.returncode == 0, f"Pipeline failed with return code {pipe_result.returncode}"
+            # Pipeline should complete without error
+            assert pipe_result.returncode == 0, f"Pipeline crashed with return code {pipe_result.returncode}"
+            
+            # Verify validation detected errors (check for success indication)
+            assert "Row counts MATCH" in pipe_result.stdout, f"Validation failed - output should contain 'Row counts MATCH', but got: {pipe_result.stdout[-500:]}"

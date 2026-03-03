@@ -5,20 +5,20 @@ import pytest
 import allure
 
 """
-Test Run: Special Characters in OrganizationTINType Column
-Injects special characters (@#$!!!&&) into the OrganizationTINType column to test ETL validation.
+Test Run: Invalid Value in AddressCode Column
+Injects invalid value 'COXE' into the AddressCode column to test ETL validation.
 """
 
 @allure.feature('ETL Validation')
 @allure.story('Invalid Data Handling')
-@allure.title('Test OrganizationTINType Column with Invalid Special Characters')
-class TestOrganizationTINTypeMixedSpecial:
+@allure.title('Test AddressCode Column with Invalid Value (COXE)')
+class TestAddressCodeInvalidCOXE:
     
     @allure.description("""
-    Test that pipeline rejects invalid special characters in OrganizationTINType column.
+    Test that pipeline rejects invalid value 'COXE' in AddressCode column.
     
     Steps:
-    1. Generate invalid parquet file with special characters (@#$!!!&&) in OrganizationTINType
+    1. Generate invalid parquet file with value 'COXE' in AddressCode
     2. Upload to S3 ready folder
     3. Trigger/monitor Glue job
     4. Verify file removed from ready folder
@@ -27,12 +27,12 @@ class TestOrganizationTINTypeMixedSpecial:
     7. Database validation: Compare DB error count with CSV row count
     """)
     @allure.severity(allure.severity_level.CRITICAL)
-    def test_organizationtintype_invalid_mixed_special(self):
+    def test_addresscode_invalid_coxe(self):
         """
-        Test that pipeline rejects invalid special characters in OrganizationTINType column.
+        Test that pipeline rejects invalid value 'COXE' in AddressCode column.
         
         Steps:
-        1. Generate invalid parquet file with special characters (@#$!!!&&) in OrganizationTINType
+        1. Generate invalid parquet file with value 'COXE' in AddressCode
         2. Upload to S3 ready folder
         3. Trigger/monitor Glue job
         4. Verify file removed from ready folder
@@ -44,19 +44,19 @@ class TestOrganizationTINTypeMixedSpecial:
         base_dir = os.path.dirname(os.path.dirname(__file__))
         pipeline_path = os.path.join(base_dir, "DM_bankfile_validate_pipeline.py")
 
-        # Run the pipeline with special characters (@#$!!!&&) injected into OrganizationTINType column
+        # Run the pipeline with invalid value 'COXE' injected into AddressCode column
         pipe_command = [
             sys.executable, pipeline_path,
-            "--invalid-values", "OrganizationTINType:@#$!!!&&",
+            "--invalid-values", "AddressCode:COXE",
             "--dev2",
             "--rows", "25"
         ]
         
-        with allure.step("Inject special characters (@#$!!!&&) into OrganizationTINType column"):
+        with allure.step("Inject invalid value 'COXE' into AddressCode column"):
             print("=" * 60)
-            print("TEST: Special Characters '@#$!!!&&' in OrganizationTINType Column")
+            print("TEST: Invalid Value 'COXE' in AddressCode Column")
             print("=" * 60)
-            print(f"Injecting: @#$!!!&& into OrganizationTINType column")
+            print(f"Injecting: COXE into AddressCode column")
             print(f"Command: {' '.join(pipe_command)}")
             print("=" * 60)
         

@@ -5,20 +5,20 @@ import pytest
 import allure
 
 """
-Test Run: Special Characters in OrganizationTINType Column
-Injects special characters (@#$!!!&&) into the OrganizationTINType column to test ETL validation.
+Test Run: Invalid Date Format in EffectiveEndDate Column
+Injects invalid date format '2026/03/03' into the EffectiveEndDate column to test ETL validation.
 """
 
 @allure.feature('ETL Validation')
 @allure.story('Invalid Data Handling')
-@allure.title('Test OrganizationTINType Column with Invalid Special Characters')
-class TestOrganizationTINTypeMixedSpecial:
+@allure.title('Test EffectiveEndDate Column with Invalid Date Format (2026/03/03)')
+class TestEffectiveEndDateInvalidFormat:
     
     @allure.description("""
-    Test that pipeline rejects invalid special characters in OrganizationTINType column.
+    Test that pipeline rejects invalid date format '2026/03/03' in EffectiveEndDate column.
     
     Steps:
-    1. Generate invalid parquet file with special characters (@#$!!!&&) in OrganizationTINType
+    1. Generate invalid parquet file with date '2026/03/03' in EffectiveEndDate
     2. Upload to S3 ready folder
     3. Trigger/monitor Glue job
     4. Verify file removed from ready folder
@@ -27,12 +27,12 @@ class TestOrganizationTINTypeMixedSpecial:
     7. Database validation: Compare DB error count with CSV row count
     """)
     @allure.severity(allure.severity_level.CRITICAL)
-    def test_organizationtintype_invalid_mixed_special(self):
+    def test_effectiveenddate_invalid_format(self):
         """
-        Test that pipeline rejects invalid special characters in OrganizationTINType column.
+        Test that pipeline rejects invalid date format '2026/03/03' in EffectiveEndDate column.
         
         Steps:
-        1. Generate invalid parquet file with special characters (@#$!!!&&) in OrganizationTINType
+        1. Generate invalid parquet file with date '2026/03/03' in EffectiveEndDate
         2. Upload to S3 ready folder
         3. Trigger/monitor Glue job
         4. Verify file removed from ready folder
@@ -44,19 +44,19 @@ class TestOrganizationTINTypeMixedSpecial:
         base_dir = os.path.dirname(os.path.dirname(__file__))
         pipeline_path = os.path.join(base_dir, "DM_bankfile_validate_pipeline.py")
 
-        # Run the pipeline with special characters (@#$!!!&&) injected into OrganizationTINType column
+        # Run the pipeline with invalid date format '2026/03/03' injected into EffectiveEndDate column
         pipe_command = [
             sys.executable, pipeline_path,
-            "--invalid-values", "OrganizationTINType:@#$!!!&&",
+            "--invalid-values", "EffectiveEndDate:2026/03/03",
             "--dev2",
             "--rows", "25"
         ]
         
-        with allure.step("Inject special characters (@#$!!!&&) into OrganizationTINType column"):
+        with allure.step("Inject invalid date format '2026/03/03' into EffectiveEndDate column"):
             print("=" * 60)
-            print("TEST: Special Characters '@#$!!!&&' in OrganizationTINType Column")
+            print("TEST: Invalid Date Format '2026/03/03' in EffectiveEndDate Column")
             print("=" * 60)
-            print(f"Injecting: @#$!!!&& into OrganizationTINType column")
+            print(f"Injecting: 2026/03/03 into EffectiveEndDate column")
             print(f"Command: {' '.join(pipe_command)}")
             print("=" * 60)
         
