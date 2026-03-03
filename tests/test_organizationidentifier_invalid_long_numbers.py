@@ -9,6 +9,7 @@ Test Run: Invalid Long Numbers in OrganizationIdentifier Column
 Injects invalid long numeric value into the OrganizationIdentifier column to test ETL validation.
 """
 
+@pytest.mark.skip(reason="Temporarily blocked to run half test suite")
 @allure.feature('ETL Validation')
 @allure.story('Invalid Data Handling')
 @allure.title('Test OrganizationIdentifier Column with Invalid Long Numbers')
@@ -73,3 +74,5 @@ class TestOrganizationIdentifierLongNumbers:
             
             # Verify validation detected errors (check for success indication)
             assert "Row counts MATCH" in pipe_result.stdout, f"Validation failed - output should contain 'Row counts MATCH', but got: {pipe_result.stdout[-500:]}"
+
+

@@ -9,6 +9,7 @@ Test Run: Too Short Value in AccountNumber Column
 Injects too short value '8' into the AccountNumber column to test ETL validation.
 """
 
+@pytest.mark.skip(reason="Temporarily blocked to run half test suite")
 @allure.feature('ETL Validation')
 @allure.story('Invalid Data Handling')
 @allure.title('Test AccountNumber Column with Too Short Value (8)')

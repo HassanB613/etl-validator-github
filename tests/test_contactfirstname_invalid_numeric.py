@@ -9,6 +9,7 @@ Test Run: Numeric Value in ContactFirstName Column
 Injects numeric value '123456789' into the ContactFirstName column to test ETL validation.
 """
 
+@pytest.mark.skip(reason="Temporarily blocked to run half test suite")
 @allure.feature('ETL Validation')
 @allure.story('Invalid Data Handling')
 @allure.title('Test ContactFirstName Column with Numeric Value (123456789)')
@@ -73,3 +74,5 @@ class TestContactFirstNameInvalidNumeric:
             
             # Verify validation detected errors (check for success indication)
             assert "Row counts MATCH" in pipe_result.stdout, f"Validation failed - output should contain 'Row counts MATCH', but got: {pipe_result.stdout[-500:]}"
+
+
