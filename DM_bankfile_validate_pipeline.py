@@ -2038,6 +2038,10 @@ def main():
     parser.add_argument("--min-max-all-columns", action="store_true", help="Test min/max and out-of-bounds for all columns at once")
     args, extra = parser.parse_known_args()
 
+    # Refresh AWS credentials at script start to ensure fresh tokens with full TTL
+    print("🔑 Initializing AWS credentials at script start...")
+    refresh_aws_credentials()
+
     # Switch environment if Dev1 is requested (default is now Dev2)
     if args.dev2:
         # Already using Dev2 as default, this flag is now a no-op
