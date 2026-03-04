@@ -38,60 +38,6 @@ glue = boto3.client("glue", region_name="us-east-1")
 # --------------------
 # AWS Credential Management (for long-running operations)
 # --------------------
-# Track credential refresh timing
-CREDENTIAL_REFRESH_INTERVAL = 1800  # Refresh every 30 minutes (with 30 min buffer from 1hr TTL)
-LAST_CREDENTIAL_REFRESH = datetime.now()
-AWS_ROLE_ARN = os.environ.get("AWS_ROLE_ARN", "arn:aws:iam::448049811908:role/mtfpm-test-automation-execution-role")
-AWS_ROLE_SESSION_NAME = os.environ.get("AWS_ROLE_SESSION_NAME", "etl-validator-session")
-
-def refresh_aws_credentials():
-    """
-    Refresh AWS STS credentials during long-running operations.
-    Calls AWS STS assume-role and updates environment variables and boto3 clients.
-    """
-    global LAST_CREDENTIAL_REFRESH, s3, glue
-    
-    try:
-        print("🔄 Refreshing AWS credentials...")
-        
-        # Call AWS STS assume-role
-        sts = boto3.client("sts")
-        response = sts.assume_role(
-            RoleArn=AWS_ROLE_ARN,
-            RoleSessionName=f"{AWS_ROLE_SESSION_NAME}-{int(time.time())}",
-            DurationSeconds=3600  # 1 hour token
-        )
-        
-        credentials = response['Credentials']
-        
-        # Update environment variables
-        os.environ['AWS_ACCESS_KEY_ID'] = credentials['AccessKeyId']
-        os.environ['AWS_SECRET_ACCESS_KEY'] = credentials['SecretAccessKey']
-        os.environ['AWS_SESSION_TOKEN'] = credentials['SessionToken']
-        
-        # Reinitialize boto3 clients with new credentials
-        s3 = boto3.client("s3")
-        glue = boto3.client("glue", region_name="us-east-1")
-        
-        LAST_CREDENTIAL_REFRESH = datetime.now()
-        expiry = credentials['Expiration']
-        print(f"✅ AWS credentials refreshed. Expiry: {expiry}")
-        
-    except Exception as e:
-        print(f"⚠️ Failed to refresh credentials: {e}")
-        print("ℹ️ Continuing with existing credentials. If operations fail, manual re-run may be needed.")
-
-def check_and_refresh_credentials():
-    """
-    Check if credentials need refresh and refresh if necessary.
-    Should be called periodically during long operations (e.g., Glue job monitoring).
-    """
-    global LAST_CREDENTIAL_REFRESH
-    
-    time_since_refresh = datetime.now() - LAST_CREDENTIAL_REFRESH
-    if time_since_refresh.total_seconds() > CREDENTIAL_REFRESH_INTERVAL:
-        print(f"⏰ Credentials have not been refreshed for {time_since_refresh.total_seconds():.0f}s")
-        refresh_aws_credentials()
 
 # Load SQL Server configuration for database validation
 sql_config = configparser.ConfigParser()
@@ -409,9 +355,6 @@ def download_latest_error_csv_from_s3(local_evidence_dir):
     Download the latest error CSV file from S3 error folder by LastModified date.
     Returns (local_file_path, row_count) or (None, 0) if not found.
     """
-    # Refresh credentials before S3 operations
-    check_and_refresh_credentials()
-    
     try:
         result = s3.list_objects_v2(Bucket=BUCKET, Prefix=ERROR_CSV_PREFIX)
         contents = result.get("Contents", [])
@@ -457,9 +400,6 @@ def validate_error_file_with_database(glue_run_id, local_evidence_dir):
     
     Returns (passed, details_dict) where passed is True if counts match.
     """
-    # Refresh credentials before starting database/S3 operations
-    check_and_refresh_credentials()
-    
     print("\n>>> Step 7: Database Error File Validation")
     details = {
         "glue_run_id": glue_run_id,
@@ -722,22 +662,14 @@ def wait_for_glue_success(job_name, timeout=600):
 
     # Monitor the job run
     start_time = time.time()
-    iteration_count = 0
     while time.time() - start_time < timeout:
         try:
-            # Refresh credentials every ~5 iterations (every ~50 seconds)
-            iteration_count += 1
-            if iteration_count % 5 == 0:
-                check_and_refresh_credentials()
-            
             status = glue.get_job_run(JobName=job_name, RunId=run_id)["JobRun"]["JobRunState"]
             print(f"⌛ Glue job status: {status}")
             if status in ["SUCCEEDED", "FAILED", "STOPPED"]:
                 if status == "SUCCEEDED":
                     print("✅ Glue job succeeded. Waiting 45 seconds for S3 propagation...")
                     time.sleep(45)
-                    # Refresh credentials one more time after waiting for S3 propagation
-                    check_and_refresh_credentials()
                 return status == "SUCCEEDED", run_id
         except Exception as e:
             print(f"⚠️ Error checking job status: {e}")
