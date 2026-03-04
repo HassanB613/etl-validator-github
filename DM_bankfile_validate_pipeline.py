@@ -39,7 +39,7 @@ glue = boto3.client("glue", region_name="us-east-1")
 # AWS Credential Management (for long-running operations)
 # --------------------
 # Track credential refresh timing
-CREDENTIAL_REFRESH_INTERVAL = 2700  # Refresh every 45 minutes (with 15 min buffer from 1hr TTL)
+CREDENTIAL_REFRESH_INTERVAL = 1800  # Refresh every 30 minutes (with 30 min buffer from 1hr TTL)
 LAST_CREDENTIAL_REFRESH = datetime.now()
 AWS_ROLE_ARN = os.environ.get("AWS_ROLE_ARN", "arn:aws:iam::448049811908:role/mtfpm-test-automation-execution-role")
 AWS_ROLE_SESSION_NAME = os.environ.get("AWS_ROLE_SESSION_NAME", "etl-validator-session")
