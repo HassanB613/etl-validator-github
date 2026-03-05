@@ -144,11 +144,7 @@ EOF
                         # Source AWS credentials for Python tests
                         . ${WORKSPACE}/.aws-env-vars.sh
                         
-                        # Check for existing checkpoint
-                        if [ -f .test_checkpoint.json ]; then
-                            echo "📂 Found checkpoint - resuming from previous run"
-                            cat .test_checkpoint.json
-                        fi
+                        # Checkpoint is loaded from S3 by conftest.py automatically
                         
                         # Create allure-results directory with proper permissions
                         mkdir -p ${WORKSPACE}/allure-results
@@ -166,11 +162,11 @@ EOF
                             EXIT_CODE=0
                         fi
                         
-                        # Exit code 1 = test failures but may include checkpoint trigger
-                        if [ $EXIT_CODE -eq 1 ] && [ -f .test_checkpoint.json ]; then
-                            echo "⚠️ Tests triggered checkpoint due to credential expiry"
-                            echo "✅ Progress saved - Jenkins will restart with fresh credentials"
-                            exit 1
+                        # Exit code 1 with checkpoint saved to S3 = credential expiry
+                        # conftest.py will have saved checkpoint to S3 before exit
+                        if [ $EXIT_CODE -eq 1 ]; then
+                            echo "⚠️ Tests may have triggered checkpoint (check S3)"
+                            echo "📍 S3 Location: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/test-checkpoints/"
                         fi
                         
                         # Fix permissions on allure results for jenkins user
@@ -200,7 +196,7 @@ EOF
                         
                         # Source AWS credentials and run tests
                         . ${WORKSPACE}/.aws-env-vars.sh
-                        python3 tests/run_sql_test.py
+                        python3 run_sql_test.py
                     '''
                 }
             }
