@@ -466,7 +466,7 @@ def download_latest_error_csv_from_s3(local_evidence_dir):
         print(f"❌ Failed to download latest error CSV: {e}")
         return None, 0
 
-def validate_error_file_with_database(glue_run_id, local_evidence_dir):
+def validate_error_file_with_database(glue_run_id, local_evidence_dir, timestamp=None, max_attempts=4, wait_seconds=30):
     """
     Full database validation workflow for error file testing:
     1. Get BATCH_ID from JOB_CONTROL using Glue Run ID (JOB_ID column)
@@ -490,38 +490,76 @@ def validate_error_file_with_database(glue_run_id, local_evidence_dir):
         print("⚠️ No Glue Run ID provided. Skipping database validation.")
         return False, details
     
-    # Step 1: Get INS_BATCH_ID from JOB_CONTROL
-    ins_batch_id = get_ins_batch_id_from_job_id(glue_run_id)
-    details["ins_batch_id"] = ins_batch_id
-    if not ins_batch_id:
-        print("❌ Could not retrieve INS_BATCH_ID. Database validation failed.")
-        return False, details
-    
-    # Step 2: Count error rows in database
-    db_error_count = get_error_count_from_db(ins_batch_id)
-    details["db_error_count"] = db_error_count
-    if db_error_count is None:
-        print("❌ Could not count errors in database. Validation failed.")
-        return False, details
-    
-    # Step 3: Download latest error CSV from S3
-    csv_path, csv_error_count = download_latest_error_csv_from_s3(local_evidence_dir)
-    details["csv_file"] = csv_path
-    details["csv_error_count"] = csv_error_count
-    
-    if not csv_path:
-        print("❌ Could not download error CSV. Validation failed.")
-        return False, details
-    
-    # Step 4: Compare counts
-    if db_error_count == csv_error_count:
-        print(f"✅ Row counts MATCH: DB={db_error_count}, CSV={csv_error_count}")
-        details["match"] = True
-        return True, details
-    else:
+    for attempt in range(1, max_attempts + 1):
+        print(f"🔁 Validation attempt {attempt}/{max_attempts}")
+
+        # Step 1: Get INS_BATCH_ID from JOB_CONTROL
+        ins_batch_id = get_ins_batch_id_from_job_id(glue_run_id)
+        details["ins_batch_id"] = ins_batch_id
+        if not ins_batch_id:
+            if attempt < max_attempts:
+                print(f"⏳ INS_BATCH_ID not available yet. Retrying in {wait_seconds}s...")
+                time.sleep(wait_seconds)
+                continue
+            print("❌ Could not retrieve INS_BATCH_ID. Database validation failed.")
+            return False, details
+
+        # Step 2: Count error rows in database
+        db_error_count = get_error_count_from_db(ins_batch_id)
+        details["db_error_count"] = db_error_count
+        if db_error_count is None:
+            if attempt < max_attempts:
+                print(f"⏳ DB error count not available yet. Retrying in {wait_seconds}s...")
+                time.sleep(wait_seconds)
+                continue
+            print("❌ Could not count errors in database. Validation failed.")
+            return False, details
+
+        # Step 3: Download expected error CSV (timestamp-specific when provided)
+        csv_path = None
+        csv_error_count = 0
+        if timestamp:
+            expected_error_key = check_expected_error_file_exists(ERROR_CSV_PREFIX, timestamp)
+            if expected_error_key:
+                try:
+                    os.makedirs(local_evidence_dir, exist_ok=True)
+                    csv_path = os.path.join(local_evidence_dir, os.path.basename(expected_error_key))
+                    s3.download_file(BUCKET, expected_error_key, csv_path)
+                    df = pd.read_csv(csv_path)
+                    csv_error_count = len(df)
+                    print(f"✅ Downloaded expected error CSV with {csv_error_count} rows: {os.path.basename(csv_path)}")
+                except Exception as e:
+                    print(f"⚠️ Failed reading expected error CSV: {e}")
+                    csv_path = None
+            else:
+                print(f"⏳ Expected error file for timestamp {timestamp} not available yet")
+        else:
+            csv_path, csv_error_count = download_latest_error_csv_from_s3(local_evidence_dir)
+
+        details["csv_file"] = csv_path
+        details["csv_error_count"] = csv_error_count
+
+        if not csv_path:
+            if attempt < max_attempts:
+                print(f"⏳ Error CSV not available yet. Retrying in {wait_seconds}s...")
+                time.sleep(wait_seconds)
+                continue
+            print("❌ Could not download error CSV. Validation failed.")
+            return False, details
+
+        # Step 4: Compare counts
+        if db_error_count == csv_error_count:
+            print(f"✅ Row counts MATCH: DB={db_error_count}, CSV={csv_error_count}")
+            details["match"] = True
+            return True, details
+
         print(f"❌ Row counts MISMATCH: DB={db_error_count}, CSV={csv_error_count}")
-        details["match"] = False
-        return False, details
+        if attempt < max_attempts:
+            print(f"⏳ Counts may still be settling. Retrying in {wait_seconds}s...")
+            time.sleep(wait_seconds)
+
+    details["match"] = False
+    return False, details
 
 # --------------------
 # Step 1: Generate test files
@@ -992,7 +1030,7 @@ def run_test_scenario(file_type, seed=None, rows=50):
         if not is_valid and glue_run_id:
             test_output_dir = os.path.dirname(file_path) if file_path else "./test_output"
             evidence_dir = os.path.join(test_output_dir, "test evidence s3 ready folder")
-            db_validation_passed, db_details = validate_error_file_with_database(glue_run_id, evidence_dir)
+            db_validation_passed, db_details = validate_error_file_with_database(glue_run_id, evidence_dir, timestamp=timestamp)
             if db_validation_passed:
                 step_status["Step 8"] = f"Passed (DB={db_details['db_error_count']}, CSV={db_details['csv_error_count']})"
             else:
@@ -1605,7 +1643,7 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
         if glue_run_id:
             test_output_dir = os.path.dirname(file_path) if file_path else "./test_output"
             evidence_dir = os.path.join(test_output_dir, "test evidence s3 ready folder")
-            db_validation_passed, db_details = validate_error_file_with_database(glue_run_id, evidence_dir)
+            db_validation_passed, db_details = validate_error_file_with_database(glue_run_id, evidence_dir, timestamp=timestamp)
             if db_validation_passed:
                 step_status["Step 7"] = f"Passed (DB={db_details['db_error_count']}, CSV={db_details['csv_error_count']})"
             else:

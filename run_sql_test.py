@@ -4,7 +4,13 @@ import os
 
 # Read config
 config = configparser.ConfigParser()
-config.read(os.path.join(os.path.dirname(__file__), '../sqlUtils/sqlconfig.ini'))
+base_dir = os.path.dirname(__file__)
+config_path = os.path.join(base_dir, 'sqlUtils', 'sqlconfig.ini')
+config.read(config_path)
+
+if 'Credentials' not in config:
+    print(f"❌ Error: Missing 'Credentials' section in config file: {config_path}")
+    exit(1)
 
 server = config['Credentials']['Server']
 database = config['Credentials']['Database']
@@ -24,7 +30,7 @@ try:
     with pyodbc.connect(conn_str) as conn:
         cursor = conn.cursor()
         # Run all .sql files in the sqlUtils folder
-        sql_dir = os.path.join(os.path.dirname(__file__), '../sqlUtils')
+        sql_dir = os.path.join(base_dir, 'sqlUtils')
         sql_files = sorted([f for f in os.listdir(sql_dir) if f.endswith('.sql')])
         
         if not sql_files:
