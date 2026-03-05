@@ -205,6 +205,7 @@ EOF
                 }
             }
         }
+        // Build #161: Testing checkpoint resume with 11 passed tests from Build #160
     }
     
     post {
