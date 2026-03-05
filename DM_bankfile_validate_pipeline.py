@@ -14,7 +14,6 @@ import random  # Add this import for random choice
 import re  # Add this import for regex
 from botocore.exceptions import ClientError
 import pyodbc  # Add this for SQL Server database validation
-from checkpoint_manager import save_checkpoint, load_checkpoint, clear_checkpoint
 
 # --------------------
 # Configuration
@@ -87,33 +86,6 @@ def check_credential_expiry(buffer_minutes: int = 10):
     
     return False
 
-def trigger_checkpoint_and_exit(test_results: dict, reason: str = "credential_expiry"):
-    """
-    Save checkpoint of completed tests and exit cleanly.
-    This allows Jenkins to restart the job with fresh credentials.
-    
-    Args:
-        test_results: Dictionary with test names as keys, pass/fail as values
-        reason: Why checkpoint is being triggered
-    """
-    completed_tests = [test_name for test_name, passed in test_results.items() if passed]
-    
-    print(f"\n{'='*60}")
-    print(f"🔄 TRIGGERING CHECKPOINT AND RESTART")
-    print(f"{'='*60}")
-    print(f"Reason: {reason}")
-    print(f"Completed tests: {len(completed_tests)}/{len(test_results)}")
-    print(f"\nSaving checkpoint...")
-    
-    save_checkpoint(completed_tests, reason)
-    
-    print(f"\n✅ Checkpoint saved successfully!")
-    print(f"🔁 Jenkins will restart the job with fresh credentials")
-    print(f"📋 Next run will skip {len(completed_tests)} completed tests")
-    print(f"{'='*60}\n")
-    
-    # Exit with success code (1) so Jenkins retries
-    exit(1)
 
 # Load SQL Server configuration for database validation
 sql_config = configparser.ConfigParser()
