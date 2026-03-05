@@ -70,18 +70,21 @@ spec:
                         export AWS_ACCESS_KEY_ID=$(cut -f1 ${WORKSPACE}/.role-creds.txt)
                         export AWS_SECRET_ACCESS_KEY=$(cut -f3 ${WORKSPACE}/.role-creds.txt)
                         export AWS_SESSION_TOKEN=$(cut -f4 ${WORKSPACE}/.role-creds.txt)
+                        export AWS_SESSION_EXPIRY=$(cut -f2 ${WORKSPACE}/.role-creds.txt)
                         
                         # Save to workspace for use in other containers
                         cat > ${WORKSPACE}/.aws-env-vars.sh <<EOF
 export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
 export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
 export AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
+export AWS_SESSION_EXPIRY=${AWS_SESSION_EXPIRY}
 export AWS_DEFAULT_REGION=${AWS_REGION}
 unset AWS_WEB_IDENTITY_TOKEN_FILE
 unset AWS_ROLE_ARN
 EOF
                         
                         echo "Successfully assumed role"
+                        echo "Credentials expire at: ${AWS_SESSION_EXPIRY}"
                         
                         # Verify the assumed role
                         . ${WORKSPACE}/.aws-env-vars.sh
@@ -141,18 +144,39 @@ EOF
                         # Source AWS credentials for Python tests
                         . ${WORKSPACE}/.aws-env-vars.sh
                         
+                        # Check for existing checkpoint
+                        if [ -f .test_checkpoint.json ]; then
+                            echo "📂 Found checkpoint - resuming from previous run"
+                            cat .test_checkpoint.json
+                        fi
+                        
                         # Create allure-results directory with proper permissions
                         mkdir -p ${WORKSPACE}/allure-results
                         chmod 777 ${WORKSPACE}/allure-results
                         
-                        # Run pytest with Allure results - runs all tests
+                        # Run pytest with Allure results
+                        # Checkpoints will auto-skip completed tests via pytest conftest.py
                         python3 -m pytest tests/ \
                             --alluredir=${WORKSPACE}/allure-results \
                             -v \
-                            --tb=short
+                            --tb=short || EXIT_CODE=$?
+                        
+                        # Handle exit codes
+                        if [ -z "$EXIT_CODE" ]; then
+                            EXIT_CODE=0
+                        fi
+                        
+                        # Exit code 1 = test failures but may include checkpoint trigger
+                        if [ $EXIT_CODE -eq 1 ] && [ -f .test_checkpoint.json ]; then
+                            echo "⚠️ Tests triggered checkpoint due to credential expiry"
+                            echo "✅ Progress saved - Jenkins will restart with fresh credentials"
+                            exit 1
+                        fi
                         
                         # Fix permissions on allure results for jenkins user
                         chmod -R 777 ${WORKSPACE}/allure-results
+                        
+                        exit $EXIT_CODE
                     '''
                 }
             }

@@ -14,6 +14,7 @@ import random  # Add this import for random choice
 import re  # Add this import for regex
 from botocore.exceptions import ClientError
 import pyodbc  # Add this for SQL Server database validation
+from checkpoint_manager import save_checkpoint, load_checkpoint, clear_checkpoint
 
 # --------------------
 # Configuration
@@ -38,6 +39,81 @@ glue = boto3.client("glue", region_name="us-east-1")
 # --------------------
 # AWS Credential Management (for long-running operations)
 # --------------------
+
+def get_credential_expiry_time():
+    """
+    Get AWS credential expiration time from environment or STS.
+    
+    Returns:
+        datetime object of expiry time, or None if not found
+    """
+    # Try to get expiry from environment variable (set by Jenkins assume-role)
+    expiry_str = os.environ.get('AWS_CREDENTIAL_EXPIRY')
+    if expiry_str:
+        try:
+            return datetime.fromisoformat(expiry_str.replace('Z', '+00:00'))
+        except:
+            pass
+    
+    # Try to extract from STS get-caller-identity or assume-role response
+    try:
+        sts = boto3.client('sts')
+        # This won't give us current credential expiry, but we can try GetSessionToken
+        # For now, return None and rely on error handling
+        return None
+    except:
+        return None
+
+def check_credential_expiry(buffer_minutes: int = 10):
+    """
+    Check if AWS credentials will expire soon and trigger checkpoint if needed.
+    
+    Args:
+        buffer_minutes: Number of minutes before expiry to trigger checkpoint (default 10)
+    
+    Returns:
+        True if credentials are expiring soon, False otherwise
+    """
+    expiry_time = get_credential_expiry_time()
+    if not expiry_time:
+        return False
+    
+    time_remaining = (expiry_time - datetime.now()).total_seconds() / 60
+    
+    if time_remaining < buffer_minutes:
+        print(f"\n⏰ ALERT: AWS credentials expiring in {time_remaining:.1f} minutes!")
+        print(f"   Expiry time: {expiry_time}")
+        return True
+    
+    return False
+
+def trigger_checkpoint_and_exit(test_results: dict, reason: str = "credential_expiry"):
+    """
+    Save checkpoint of completed tests and exit cleanly.
+    This allows Jenkins to restart the job with fresh credentials.
+    
+    Args:
+        test_results: Dictionary with test names as keys, pass/fail as values
+        reason: Why checkpoint is being triggered
+    """
+    completed_tests = [test_name for test_name, passed in test_results.items() if passed]
+    
+    print(f"\n{'='*60}")
+    print(f"🔄 TRIGGERING CHECKPOINT AND RESTART")
+    print(f"{'='*60}")
+    print(f"Reason: {reason}")
+    print(f"Completed tests: {len(completed_tests)}/{len(test_results)}")
+    print(f"\nSaving checkpoint...")
+    
+    save_checkpoint(completed_tests, reason)
+    
+    print(f"\n✅ Checkpoint saved successfully!")
+    print(f"🔁 Jenkins will restart the job with fresh credentials")
+    print(f"📋 Next run will skip {len(completed_tests)} completed tests")
+    print(f"{'='*60}\n")
+    
+    # Exit with success code (1) so Jenkins retries
+    exit(1)
 
 # Load SQL Server configuration for database validation
 sql_config = configparser.ConfigParser()
@@ -1642,6 +1718,13 @@ def run_invalid_values_scenario(invalid_values, rows=50, formats=["csv"], seed=N
     timestamp = timestamp or datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir = f"./test_output/invalid_values_{timestamp}"
     os.makedirs(output_dir, exist_ok=True)
+    
+    # Check credential expiry at the start of test
+    if check_credential_expiry(buffer_minutes=10):
+        print("⚠️ Credentials expiring soon - saving checkpoint")
+        # The checkpoint will be saved by the test framework
+        raise SystemExit(1)
+    
     output_filename = f"mtfdm_{ENV_SUFFIX}_dmbankdata_{timestamp}"
     # Ensure parquet output for sidecar (Excel/CSV) creation
     if "parquet" not in formats:
