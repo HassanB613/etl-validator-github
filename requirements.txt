@@ -8,3 +8,4 @@ pyodbc
 openpyxl
 pytest
 allure-pytest
+python-dateutil
