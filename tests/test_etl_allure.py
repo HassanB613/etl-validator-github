@@ -145,7 +145,7 @@ class TestSQLConnectivity:
     def test_sql_connection(self):
         """Test SQL Server database connectivity."""
         base_dir = os.path.dirname(os.path.dirname(__file__))
-        sql_test_path = os.path.join(base_dir, "tests", "run_sql_test.py")
+        sql_test_path = os.path.join(base_dir, "run_sql_test.py")
         
         with allure.step("Execute SQL connection test"):
             result = subprocess.run([sys.executable, sql_test_path], 
