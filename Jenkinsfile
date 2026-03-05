@@ -62,7 +62,6 @@ spec:
                         aws sts assume-role \
                           --role-arn ${TARGET_ROLE} \
                           --role-session-name jenkins-test-${BUILD_NUMBER} \
-                          --duration-seconds 28800 \
                           --output text \
                           --query Credentials \
                           > ${WORKSPACE}/.role-creds.txt
