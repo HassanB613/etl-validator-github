@@ -149,8 +149,9 @@ EOF
                         . ${WORKSPACE}/.aws-env-vars.sh
 
                         # Optional resume from prior checkpoint
-                        if [ -n "${CHECKPOINT_ID}" ]; then
-                            export CHECKPOINT_ID=${CHECKPOINT_ID}
+                        CHECKPOINT_ID_TRIMMED=$(echo "${CHECKPOINT_ID}" | xargs)
+                        if [ -n "${CHECKPOINT_ID_TRIMMED}" ]; then
+                            export CHECKPOINT_ID=${CHECKPOINT_ID_TRIMMED}
                             echo "Resuming from checkpoint ID: ${CHECKPOINT_ID}"
                         else
                             echo "Starting with auto-generated checkpoint ID"

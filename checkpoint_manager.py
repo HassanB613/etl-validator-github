@@ -25,7 +25,9 @@ class CheckpointManager:
         self.s3_bucket = "mtfpm-dev2-s3-mtfdmstaging-us-east-1"
         self.checkpoint_prefix = "test-checkpoints"
         self.s3_client = boto3.client("s3")
-        self.checkpoint_id = os.environ.get("CHECKPOINT_ID", str(uuid.uuid4())[:8])
+        env_checkpoint_id = os.environ.get("CHECKPOINT_ID", "")
+        env_checkpoint_id = env_checkpoint_id.strip()
+        self.checkpoint_id = env_checkpoint_id if env_checkpoint_id else str(uuid.uuid4())[:8]
         self.run_start_time = None
         self.checkpoint_threshold_minutes = 45
         self.completed_tests = set()
@@ -46,12 +48,14 @@ class CheckpointManager:
             self.completed_tests = set(checkpoint_data['completed_tests'])
             print(f"\n✅ Loaded checkpoint: {len(self.completed_tests)} tests already completed")
             print(f"   Checkpoint ID: {self.checkpoint_id}")
+            print(f"   S3 key: {self.checkpoint_file}")
             print(f"   Run started at: {self.run_start_time}")
         except self.s3_client.exceptions.NoSuchKey:
             # First run, initialize timing
             self.run_start_time = datetime.now()
             self.completed_tests = set()
             print(f"\n🆕 New test run started (Checkpoint ID: {self.checkpoint_id})")
+            print(f"   No existing S3 checkpoint found at: {self.checkpoint_file}")
         except Exception as e:
             print(f"⚠️  Could not load checkpoint: {e}. Starting fresh.")
             self.run_start_time = datetime.now()
