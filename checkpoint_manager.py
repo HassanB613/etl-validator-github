@@ -29,6 +29,7 @@ class CheckpointManager:
         env_checkpoint_id = env_checkpoint_id.strip()
         self.checkpoint_id = env_checkpoint_id if env_checkpoint_id else str(uuid.uuid4())[:8]
         self.run_start_time = None
+        self.cumulative_elapsed_minutes = 0.0
         self.checkpoint_threshold_minutes = 45
         self.completed_tests = set()
         self.checkpoint_file = f"{self.checkpoint_prefix}/checkpoint_{self.checkpoint_id}.json"
@@ -44,21 +45,29 @@ class CheckpointManager:
                 Key=self.checkpoint_file
             )
             checkpoint_data = json.loads(response['Body'].read().decode('utf-8'))
-            self.run_start_time = datetime.fromisoformat(checkpoint_data['run_start_time'])
+            previous_elapsed = checkpoint_data.get(
+                'cumulative_elapsed_minutes',
+                checkpoint_data.get('elapsed_minutes', 0.0)
+            )
+            self.cumulative_elapsed_minutes = float(previous_elapsed or 0.0)
+            self.run_start_time = datetime.now()
             self.completed_tests = set(checkpoint_data['completed_tests'])
             print(f"\n✅ Loaded checkpoint: {len(self.completed_tests)} tests already completed")
             print(f"   Checkpoint ID: {self.checkpoint_id}")
             print(f"   S3 key: {self.checkpoint_file}")
-            print(f"   Run started at: {self.run_start_time}")
+            print(f"   Previous cumulative elapsed: {self.cumulative_elapsed_minutes:.1f} minutes")
+            print(f"   New run started at: {self.run_start_time}")
         except self.s3_client.exceptions.NoSuchKey:
             # First run, initialize timing
             self.run_start_time = datetime.now()
+            self.cumulative_elapsed_minutes = 0.0
             self.completed_tests = set()
             print(f"\n🆕 New test run started (Checkpoint ID: {self.checkpoint_id})")
             print(f"   No existing S3 checkpoint found at: {self.checkpoint_file}")
         except Exception as e:
             print(f"⚠️  Could not load checkpoint: {e}. Starting fresh.")
             self.run_start_time = datetime.now()
+            self.cumulative_elapsed_minutes = 0.0
             self.completed_tests = set()
     
     def get_elapsed_minutes(self):
@@ -67,6 +76,10 @@ class CheckpointManager:
             return 0
         elapsed = datetime.now() - self.run_start_time
         return elapsed.total_seconds() / 60
+
+    def get_total_elapsed_minutes(self):
+        """Get cumulative elapsed time across all resumed runs."""
+        return self.cumulative_elapsed_minutes + self.get_elapsed_minutes()
     
     def should_checkpoint(self):
         """
@@ -112,6 +125,7 @@ class CheckpointManager:
                 "run_start_time": self.run_start_time.isoformat(),
                 "checkpoint_time": datetime.now().isoformat(),
                 "elapsed_minutes": self.get_elapsed_minutes(),
+                "cumulative_elapsed_minutes": self.get_total_elapsed_minutes(),
                 "completed_tests": list(self.completed_tests),
                 "total_completed": len(self.completed_tests)
             }
@@ -122,7 +136,11 @@ class CheckpointManager:
                 Body=json.dumps(checkpoint_data, indent=2),
                 ContentType="application/json"
             )
-            print(f"💾 Checkpoint saved ({len(self.completed_tests)} tests, {self.get_elapsed_minutes():.1f} min elapsed)")
+            print(
+                f"💾 Checkpoint saved ({len(self.completed_tests)} tests, "
+                f"{self.get_elapsed_minutes():.1f} min this run, "
+                f"{self.get_total_elapsed_minutes():.1f} min total)"
+            )
         except Exception as e:
             print(f"⚠️  Failed to save checkpoint: {e}")
     
@@ -134,8 +152,10 @@ class CheckpointManager:
             Checkpoint summary as dict
         """
         elapsed = self.get_elapsed_minutes()
+        total_elapsed = self.get_total_elapsed_minutes()
         print(f"\n⏰ CHECKPOINT AT 45-MINUTE MARK ⏰")
-        print(f"Elapsed time: {elapsed:.1f} minutes")
+        print(f"Elapsed time (this run): {elapsed:.1f} minutes")
+        print(f"Elapsed time (total): {total_elapsed:.1f} minutes")
         print(f"Tests completed: {len(self.completed_tests)}")
         print(f"Checkpoint ID: {self.checkpoint_id}")
         
@@ -144,6 +164,7 @@ class CheckpointManager:
         return {
             "checkpoint_id": self.checkpoint_id,
             "elapsed_minutes": elapsed,
+            "total_elapsed_minutes": total_elapsed,
             "tests_completed": len(self.completed_tests),
             "completed_test_names": list(self.completed_tests)
         }
