@@ -34,6 +34,10 @@ spec:
     tools {
         allure 'allure'
     }
+
+    parameters {
+        string(name: 'CHECKPOINT_ID', defaultValue: '', description: 'Optional: existing checkpoint ID to resume (example: ff3e2f12)')
+    }
     
     environment {
         // Only hardcode what's NOT in the Python script
@@ -143,6 +147,14 @@ EOF
                         
                         # Source AWS credentials for Python tests
                         . ${WORKSPACE}/.aws-env-vars.sh
+
+                        # Optional resume from prior checkpoint
+                        if [ -n "${CHECKPOINT_ID}" ]; then
+                            export CHECKPOINT_ID=${CHECKPOINT_ID}
+                            echo "Resuming from checkpoint ID: ${CHECKPOINT_ID}"
+                        else
+                            echo "Starting with auto-generated checkpoint ID"
+                        fi
                         
                         # Checkpoint is loaded from S3 by conftest.py automatically
                         
