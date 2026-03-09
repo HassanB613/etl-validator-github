@@ -602,6 +602,39 @@ def run_generator_file(is_valid=True, timestamp=None, seed=None, rows=50):
 
     return parquet_path
 
+
+def _to_epoch(dt_value):
+    """Convert datetime-like values to epoch seconds."""
+    if not dt_value:
+        return None
+    try:
+        return dt_value.timestamp()
+    except Exception:
+        return None
+
+
+def get_ready_folder_files():
+    """Return non-folder object keys currently in ready prefix."""
+    result = s3.list_objects_v2(Bucket=BUCKET, Prefix=S3_PREFIX + "/")
+    return [obj["Key"] for obj in result.get("Contents", []) if not obj["Key"].endswith("/")]
+
+
+def get_glue_runs_since(job_name, min_started_epoch=None, max_results=25):
+    """Fetch Glue runs optionally filtered by StartedOn >= min_started_epoch."""
+    try:
+        response = glue.get_job_runs(JobName=job_name, MaxResults=max_results)
+        runs = []
+        for run in response.get("JobRuns", []):
+            started_epoch = _to_epoch(run.get("StartedOn"))
+            if min_started_epoch is not None and started_epoch is not None and started_epoch < min_started_epoch:
+                continue
+            runs.append(run)
+        runs.sort(key=lambda r: _to_epoch(r.get("StartedOn")) or 0, reverse=True)
+        return runs
+    except Exception as e:
+        print(f"⚠️ Could not fetch Glue runs: {e}")
+        return []
+
 # --------------------
 # Step 2: Upload to S3
 # --------------------
@@ -612,32 +645,38 @@ def wait_for_ready_folder_empty_and_glue_idle(job_name, timeout=300):
     """
     print("🔍 Checking if ready folder is empty and Glue is idle before uploading...")
     start_time = time.time()
+    last_reason = "Unknown wait condition"
     
     while time.time() - start_time < timeout:
         # Check if Glue job is running
         running_job = get_running_glue_job(job_name)
         if running_job:
-            print(f"⏳ Glue job {running_job} is still running. Waiting...")
+            last_reason = f"Glue job still running: {running_job}"
+            print(f"⏳ {last_reason}. Waiting...")
             time.sleep(15)
             continue
         
         # Check if ready folder has any files
         try:
-            result = s3.list_objects_v2(Bucket=BUCKET, Prefix=S3_PREFIX + "/")
-            files = [obj["Key"] for obj in result.get("Contents", []) if not obj["Key"].endswith("/")]
+            files = get_ready_folder_files()
             if files:
-                print(f"⏳ Ready folder still has files: {files}. Waiting for Glue to process...")
+                last_reason = f"Ready folder has {len(files)} file(s): {files}"
+                print(f"⏳ {last_reason}. Waiting for Glue to process...")
                 time.sleep(15)
                 continue
         except Exception as e:
-            print(f"⚠️ Could not check ready folder: {e}")
+            last_reason = f"Could not check ready folder: {e}"
+            print(f"⚠️ {last_reason}")
+            time.sleep(10)
+            continue
         
         # Both conditions met - ready to proceed
         print("✅ Ready folder is empty and Glue is idle. Safe to upload new file.")
-        return True
+        return True, "Ready folder empty and Glue idle"
     
-    print("⚠️ Timeout waiting for ready folder to clear. Proceeding anyway...")
-    return False
+    failure_reason = f"Timeout waiting for ready folder/glue idle ({timeout}s). Last condition: {last_reason}"
+    print(f"❌ {failure_reason}")
+    return False, failure_reason
 
 def upload_to_s3(file_path):
     """
@@ -649,17 +688,28 @@ def upload_to_s3(file_path):
         raise FileNotFoundError(f"File not found: {file_path}")
 
     # Wait for previous test to complete before uploading
-    wait_for_ready_folder_empty_and_glue_idle(GLUE_JOB_NAME)
+    ready_ok, ready_reason = wait_for_ready_folder_empty_and_glue_idle(GLUE_JOB_NAME)
+    if not ready_ok:
+        raise RuntimeError(
+            f"Pre-upload gate failed: {ready_reason}. "
+            "Upload aborted to prevent mixing files across Glue runs."
+        )
 
     s3_key = f"{S3_PREFIX}/{os.path.basename(file_path)}"
     print(f"📤 Uploading {file_path} to s3://{BUCKET}/{s3_key}")
+    upload_started_epoch = time.time()
     try:
         s3.upload_file(file_path, BUCKET, s3_key)
         print(f"✅ Successfully uploaded to s3://{BUCKET}/{s3_key}")
     except Exception as e:
         print(f"⚠️ S3 upload failed: {str(e)}")
         print(f"ℹ️ Continuing without AWS operations. Please configure AWS credentials if S3 upload is required.")
-    return s3_key
+    return {
+        "s3_key": s3_key,
+        "upload_started_epoch": upload_started_epoch,
+        "upload_completed_epoch": time.time(),
+        "ready_gate_reason": ready_reason,
+    }
 
 # --------------------
 # Step 3: Trigger & monitor Glue
@@ -682,33 +732,38 @@ def get_running_glue_job(job_name):
         print(f"⚠️ Could not check for running Glue jobs: {e}")
         return None
 
-def wait_for_glue_success(job_name, timeout=600):
+def wait_for_glue_success(job_name, timeout=600, upload_started_epoch=None):
     """
     Wait for Glue job to succeed. First checks if job is already running (auto-triggered by S3),
     if so, monitors that run. Otherwise starts a new run.
     
-    Returns tuple: (success: bool, run_id: str or None)
+    Returns tuple: (success: bool, run_id: str or None, reason: str)
     """
     run_id = None
+    run_reason = ""
+    correlation_floor = (upload_started_epoch - 2) if upload_started_epoch else None
     
     # Wait a moment for S3 trigger to potentially start the Glue job
     print("⏳ Waiting 15 seconds for S3 trigger to potentially start Glue job...")
     time.sleep(15)
     
-    # Check multiple times for a running job (S3 trigger may have a delay)
-    print("🔍 Checking if Glue job is already running...")
-    for check_attempt in range(3):
-        existing_run_id = get_running_glue_job(job_name)
-        if existing_run_id:
-            print(f"✅ Glue job is already running (RunId: {existing_run_id}). Monitoring existing run...")
-            run_id = existing_run_id
+    # Check multiple times for a run started after this upload (S3 trigger may have a delay)
+    print("🔍 Checking for post-upload Glue job run...")
+    for check_attempt in range(9):
+        candidate_runs = get_glue_runs_since(job_name, min_started_epoch=correlation_floor, max_results=25)
+        if candidate_runs:
+            selected_run = candidate_runs[0]
+            run_id = selected_run.get("Id")
+            started_on = selected_run.get("StartedOn")
+            run_reason = f"Monitoring post-upload Glue run (StartedOn={started_on})"
+            print(f"✅ {run_reason}. RunId: {run_id}")
             break
-        if check_attempt < 2:
-            print(f"⏳ No running job found yet, waiting 10s (check {check_attempt + 1}/3)...")
+        if check_attempt < 8:
+            print(f"⏳ No post-upload run found yet, waiting 10s (check {check_attempt + 1}/9)...")
             time.sleep(10)
     
     if not run_id:
-        print("🕒 No running Glue job found after checks. Starting new Glue job...")
+        print("🕒 No post-upload Glue run found. Starting new Glue job...")
         attempt = 0
         # Retry on concurrency errors (in case job started between our check and start attempt)
         while True:
@@ -717,6 +772,7 @@ def wait_for_glue_success(job_name, timeout=600):
                 response = glue.start_job_run(JobName=job_name)
                 run_id = response["JobRunId"]
                 print(f"✅ Started new Glue job run: {run_id}")
+                run_reason = "Started Glue run explicitly because no post-upload triggered run was detected"
                 break
             except Exception as e:
                 # Determine if this is a concurrency exception
@@ -729,10 +785,11 @@ def wait_for_glue_success(job_name, timeout=600):
                     # Job started between our check and start - find it and monitor
                     print(f"⚠️ Concurrent run detected. Checking for the running job...")
                     time.sleep(5)
-                    existing_run_id = get_running_glue_job(job_name)
-                    if existing_run_id:
-                        print(f"✅ Found running job: {existing_run_id}. Monitoring it...")
-                        run_id = existing_run_id
+                    candidate_runs = get_glue_runs_since(job_name, min_started_epoch=correlation_floor, max_results=25)
+                    if candidate_runs:
+                        run_id = candidate_runs[0].get("Id")
+                        run_reason = "Concurrency detected; monitoring post-upload run found during retry"
+                        print(f"✅ Found post-upload run: {run_id}. Monitoring it...")
                         break
                     # If still no running job found, retry start
                     wait_time = min(60, 10 * attempt)
@@ -740,11 +797,11 @@ def wait_for_glue_success(job_name, timeout=600):
                     time.sleep(wait_time)
                     continue
                 print(f"❌ Error starting Glue job: {e}")
-                return False, None
+                return False, None, f"Failed to start Glue job: {e}"
     
     if not run_id:
         print("❌ Could not start or find Glue job.")
-        return False, None
+        return False, None, "No Glue run found or started"
 
     # Monitor the job run
     start_time = time.time()
@@ -756,13 +813,15 @@ def wait_for_glue_success(job_name, timeout=600):
                 if status == "SUCCEEDED":
                     print("✅ Glue job succeeded. Waiting 45 seconds for S3 propagation...")
                     time.sleep(45)
-                return status == "SUCCEEDED", run_id
+                if status == "SUCCEEDED":
+                    return True, run_id, run_reason or "Glue job succeeded"
+                return False, run_id, f"Glue run ended with status {status}"
         except Exception as e:
             print(f"⚠️ Error checking job status: {e}")
         time.sleep(10)
 
     print("❌ Timeout waiting for Glue job to complete.")
-    return False, run_id
+    return False, run_id, f"Timeout waiting for Glue run {run_id} to complete"
 
 # --------------------
 # Step 4: Validate S3 Outputs
@@ -930,7 +989,8 @@ def run_test_scenario(file_type, seed=None, rows=50):
         file_path = run_generator_file(is_valid=is_valid, timestamp=timestamp, seed=seed, rows=rows)
 
         print(">>> Step 2: Upload to S3")
-        upload_to_s3(file_path)
+        upload_metadata = upload_to_s3(file_path)
+        step_status["Step 2"] = f"Passed ({upload_metadata.get('s3_key')})"
 
         time.sleep(5)
 
@@ -940,10 +1000,14 @@ def run_test_scenario(file_type, seed=None, rows=50):
         print(f"✅ {file_type.capitalize()} file is present in S3.")
 
         print(">>> Step 4: Trigger and monitor Glue job")
-        glue_job_success, glue_run_id = wait_for_glue_success(GLUE_JOB_NAME)
+        glue_job_success, glue_run_id, glue_reason = wait_for_glue_success(
+            GLUE_JOB_NAME,
+            upload_started_epoch=upload_metadata.get("upload_started_epoch")
+        )
         if not glue_job_success:
-            step_status["Step 4"] = "Failed"
-            raise Exception("❌ Glue job failed.")
+            step_status["Step 4"] = f"Failed: {glue_reason}"
+            raise Exception(f"❌ Glue job failed: {glue_reason}")
+        step_status["Step 4"] = f"Passed (RunId={glue_run_id}; {glue_reason})"
 
         # Additional wait for S3 consistency after Glue completes
         print("⏳ Waiting additional 30 seconds for S3 consistency...")
@@ -1017,6 +1081,8 @@ def run_test_scenario(file_type, seed=None, rows=50):
     except AssertionError as e:
         print(str(e))
     except Exception as e:
+        if step_status.get("Step 2", "") == "Passed":
+            step_status["Step 2"] = f"Failed: {e}"
         print(str(e))
     finally:
         # --- Download S3 evidence BEFORE TestRail reporting ---
@@ -1095,13 +1161,18 @@ def run_missing_column_scenario(column_names, rows=50, timestamp=None):
     except Exception as e:
         print(f"⚠️ Could not create Excel/CSV/Parquet file: {e}")
     try:
-        upload_to_s3(parquet_path)
+        upload_metadata = upload_to_s3(parquet_path)
         print(f"✅ Uploaded file missing column(s): {column_names}")
     except Exception as e:
         print(f"❌ Could not upload to S3: {e}\nSkipping full ETL pipeline.")
         return None, timestamp
     # Run full ETL pipeline if upload succeeded
-    return run_full_etl_pipeline_with_existing_file(parquet_path, scenario_name=f"missing_column_{column_names}", timestamp=timestamp)
+    return run_full_etl_pipeline_with_existing_file(
+        parquet_path,
+        scenario_name=f"missing_column_{column_names}",
+        timestamp=timestamp,
+        upload_metadata=upload_metadata,
+    )
 
 def run_rename_column_scenario(rename_specs, rows=50, timestamp=None):
     """Generate dataset then rename one or more columns before running full ETL.
@@ -1169,14 +1240,19 @@ def run_rename_column_scenario(rename_specs, rows=50, timestamp=None):
     except Exception as e:
         print(f"⚠️ Could not create updated files after rename: {e}")
     try:
-        upload_to_s3(parquet_path)
+        upload_metadata = upload_to_s3(parquet_path)
         print(f"✅ Uploaded file with renamed columns: {applied}")
     except Exception as e:
         print(f"❌ Could not upload to S3: {e}\nSkipping full ETL pipeline.")
         return None, timestamp
     # Run full ETL pipeline if upload succeeded
     scenario_tag = "_".join([f"{o}2{n}" for o, n in mappings.items()])
-    return run_full_etl_pipeline_with_existing_file(parquet_path, scenario_name=f"rename_column_{scenario_tag}", timestamp=timestamp)
+    return run_full_etl_pipeline_with_existing_file(
+        parquet_path,
+        scenario_name=f"rename_column_{scenario_tag}",
+        timestamp=timestamp,
+        upload_metadata=upload_metadata,
+    )
 
 def run_rename_and_invalid_values_scenario(rename_specs, invalid_values, rows=50, formats=["parquet"], seed=None, extra_args=None, timestamp=None):
     """Composite scenario: rename columns first, then inject invalid values.
@@ -1264,14 +1340,19 @@ def run_rename_and_invalid_values_scenario(rename_specs, invalid_values, rows=50
         print(f"❌ Failed during rename+invalid processing: {e}")
         return None, timestamp
     try:
-        upload_to_s3(parquet_path)
+        upload_metadata = upload_to_s3(parquet_path)
         print("✅ Uploaded composite scenario file to S3")
     except Exception as e:
         print(f"❌ Upload failed: {e}\nSkipping ETL run.")
         return None, timestamp
     tag_parts = [f"{o}2{n}" for o, n in mappings.items()] if mappings else ["noRename"]
     tag = "_".join(tag_parts)
-    return run_full_etl_pipeline_with_existing_file(parquet_path, scenario_name=f"rename_invalid_{tag}", timestamp=timestamp)
+    return run_full_etl_pipeline_with_existing_file(
+        parquet_path,
+        scenario_name=f"rename_invalid_{tag}",
+        timestamp=timestamp,
+        upload_metadata=upload_metadata,
+    )
 
 def run_composite_transform_scenario(rename_specs=None, invalid_values=None, drop_columns=None, rows=50, formats=["parquet"], seed=None, extra_args=None, timestamp=None):
     """Composite scenario applying (in order): generate -> rename -> drop columns -> inject invalid values.
@@ -1379,7 +1460,7 @@ def run_composite_transform_scenario(rename_specs=None, invalid_values=None, dro
         print(f"❌ Composite processing failed: {e}")
         return None, timestamp
     try:
-        upload_to_s3(parquet_path)
+        upload_metadata = upload_to_s3(parquet_path)
         print("✅ Uploaded composite scenario file to S3")
     except Exception as e:
         print(f"❌ Upload failed: {e}\nSkipping ETL run.")
@@ -1392,7 +1473,12 @@ def run_composite_transform_scenario(rename_specs=None, invalid_values=None, dro
     if invalid_list:
         tag_parts.append("inv")
     tag = "__".join(tag_parts) if tag_parts else "composite"
-    return run_full_etl_pipeline_with_existing_file(parquet_path, scenario_name=f"composite_{tag}", timestamp=timestamp)
+    return run_full_etl_pipeline_with_existing_file(
+        parquet_path,
+        scenario_name=f"composite_{tag}",
+        timestamp=timestamp,
+        upload_metadata=upload_metadata,
+    )
 
 def run_duplicate_row_scenario(row_index=0, rows=50, timestamp=None):
     """
@@ -1439,13 +1525,18 @@ def run_duplicate_row_scenario(row_index=0, rows=50, timestamp=None):
         print(f"⚠️ Could not create Excel/CSV file: {e}")
 
     try:
-        upload_to_s3(parquet_path)
+        upload_metadata = upload_to_s3(parquet_path)
         print(f"✅ Uploaded file with duplicated row {row_index}")
     except Exception as e:
         print(f"❌ Could not upload to S3: {e}")
         return None, timestamp
 
-    return run_full_etl_pipeline_with_existing_file(parquet_path, scenario_name=f"duplicate_row_{row_index}", timestamp=timestamp)
+    return run_full_etl_pipeline_with_existing_file(
+        parquet_path,
+        scenario_name=f"duplicate_row_{row_index}",
+        timestamp=timestamp,
+        upload_metadata=upload_metadata,
+    )
 
 # New scenario: duplicate PayeeID across two rows
 import re
@@ -1487,8 +1578,13 @@ def run_duplicate_payee_id_scenario(rows=50, formats=["parquet"], seed=None, tim
     except Exception:
         pass
     # Upload and run full pipeline
-    upload_to_s3(parquet_path)
-    return run_full_etl_pipeline_with_existing_file(parquet_path, scenario_name="duplicate_payee_id", timestamp=timestamp)
+    upload_metadata = upload_to_s3(parquet_path)
+    return run_full_etl_pipeline_with_existing_file(
+        parquet_path,
+        scenario_name="duplicate_payee_id",
+        timestamp=timestamp,
+        upload_metadata=upload_metadata,
+    )
 
 def check_expected_error_file_exists(prefix, timestamp):
     """
@@ -1557,7 +1653,7 @@ def download_specific_archive_file(archive_prefix, timestamp, local_evidence_dir
         print(f"⚠️ Failed to download archive file: {str(e)}")
         return False, False
 
-def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp):
+def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp, upload_metadata=None):
     """
     Run the full ETL pipeline (Glue, S3 evidence, TestRail) for a file already generated and uploaded.
     """
@@ -1581,11 +1677,14 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
         step_status["Step 3"] = "Passed"
 
         print(">>> Step 4: Trigger and monitor Glue job")
-        glue_job_success, glue_run_id = wait_for_glue_success(GLUE_JOB_NAME)
+        glue_job_success, glue_run_id, glue_reason = wait_for_glue_success(
+            GLUE_JOB_NAME,
+            upload_started_epoch=(upload_metadata or {}).get("upload_started_epoch")
+        )
         if not glue_job_success:
-            step_status["Step 4"] = "Failed"
-            raise Exception("❌ Glue job failed.")
-        step_status["Step 4"] = "Passed"
+            step_status["Step 4"] = f"Failed: {glue_reason}"
+            raise Exception(f"❌ Glue job failed: {glue_reason}")
+        step_status["Step 4"] = f"Passed (RunId={glue_run_id}; {glue_reason})"
         time.sleep(20)
 
         print(">>> Step 5: Validate S3 outputs (Ready folder)")
@@ -1684,9 +1783,14 @@ def run_invalid_extension_scenario(extension, rows=50, formats=["csv"], seed=Non
     invalid_file = output_filename + f".{extension}"
     file_path = os.path.join(output_dir, invalid_file)
     print(f"📤 Uploading invalid file {file_path} to S3 (should be rejected)")
-    upload_to_s3(file_path)
+    upload_metadata = upload_to_s3(file_path)
     # After uploading the invalid extension file, run full ETL pipeline for error handling
-    return run_full_etl_pipeline_with_existing_file(file_path, scenario_name="invalid_extension", timestamp=timestamp)
+    return run_full_etl_pipeline_with_existing_file(
+        file_path,
+        scenario_name="invalid_extension",
+        timestamp=timestamp,
+        upload_metadata=upload_metadata,
+    )
 
 def run_invalid_mfr_ein_ssn_scenario(flag_value, rows=50, formats=["csv"], seed=None, extra_args=None, timestamp=None):
     """
@@ -1718,8 +1822,13 @@ def run_invalid_mfr_ein_ssn_scenario(flag_value, rows=50, formats=["csv"], seed=
         df.to_csv(os.path.join(output_dir, output_filename + ".csv"), index=False)
     except Exception:
         pass
-    upload_to_s3(parquet_path)
-    return run_full_etl_pipeline_with_existing_file(parquet_path, scenario_name="invalid_mfr_ein_ssn", timestamp=timestamp)
+    upload_metadata = upload_to_s3(parquet_path)
+    return run_full_etl_pipeline_with_existing_file(
+        parquet_path,
+        scenario_name="invalid_mfr_ein_ssn",
+        timestamp=timestamp,
+        upload_metadata=upload_metadata,
+    )
 
 def run_invalid_values_scenario(invalid_values, rows=50, formats=["csv"], seed=None, extra_args=None, timestamp=None):
     """
@@ -1777,8 +1886,13 @@ def run_invalid_values_scenario(invalid_values, rows=50, formats=["csv"], seed=N
         print(f"✅ Injected invalid values {invalid_values} into {parquet_path}")
     except Exception as e:
         print(f"⚠️ Could not inject invalid values: {e}")
-    upload_to_s3(parquet_path)
-    return run_full_etl_pipeline_with_existing_file(parquet_path, scenario_name="invalid_values", timestamp=timestamp)
+    upload_metadata = upload_to_s3(parquet_path)
+    return run_full_etl_pipeline_with_existing_file(
+        parquet_path,
+        scenario_name="invalid_values",
+        timestamp=timestamp,
+        upload_metadata=upload_metadata,
+    )
 
 def run_missing_row_scenario(row_indices, rows=50, formats=["csv"], seed=None, extra_args=None, timestamp=None):
     """
@@ -1815,8 +1929,13 @@ def run_missing_row_scenario(row_indices, rows=50, formats=["csv"], seed=None, e
         df.to_csv(os.path.join(output_dir, output_filename + ".csv"), index=False)
     except Exception:
         pass
-    upload_to_s3(parquet_path)
-    return run_full_etl_pipeline_with_existing_file(parquet_path, scenario_name="missing_row", timestamp=timestamp)
+    upload_metadata = upload_to_s3(parquet_path)
+    return run_full_etl_pipeline_with_existing_file(
+        parquet_path,
+        scenario_name="missing_row",
+        timestamp=timestamp,
+        upload_metadata=upload_metadata,
+    )
 
 def run_extra_columns_scenario(extra_columns, rows=50, formats=["csv"], seed=None, extra_args=None, timestamp=None):
     """
@@ -1846,8 +1965,13 @@ def run_extra_columns_scenario(extra_columns, rows=50, formats=["csv"], seed=Non
         df.to_csv(os.path.join(output_dir, output_filename + ".csv"), index=False)
     except Exception:
         pass
-    upload_to_s3(parquet_path)
-    return run_full_etl_pipeline_with_existing_file(parquet_path, scenario_name="extra_columns", timestamp=timestamp)
+    upload_metadata = upload_to_s3(parquet_path)
+    return run_full_etl_pipeline_with_existing_file(
+        parquet_path,
+        scenario_name="extra_columns",
+        timestamp=timestamp,
+        upload_metadata=upload_metadata,
+    )
 
 def run_min_max_limits_scenario(column_limits, rows=50, formats=["csv"], seed=None, extra_args=None, timestamp=None):
     """
@@ -1950,8 +2074,13 @@ def run_min_max_limits_scenario(column_limits, rows=50, formats=["csv"], seed=No
         print(f"✅ Set min/max/out-of-bounds values for {list(column_limits.keys())} in {parquet_path}")
     except Exception as e:
         print(f"⚠️ Could not set min/max values: {e}")
-    upload_to_s3(parquet_path)
-    return run_full_etl_pipeline_with_existing_file(parquet_path, scenario_name="min_max_limits", timestamp=timestamp)
+    upload_metadata = upload_to_s3(parquet_path)
+    return run_full_etl_pipeline_with_existing_file(
+        parquet_path,
+        scenario_name="min_max_limits",
+        timestamp=timestamp,
+        upload_metadata=upload_metadata,
+    )
 
 # Lambdas for Organization rules
 ORG_IDENTIFIER_LAMBDA = {
