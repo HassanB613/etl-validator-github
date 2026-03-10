@@ -15,6 +15,13 @@ import re  # Add this import for regex
 from botocore.exceptions import ClientError
 import pyodbc  # Add this for SQL Server database validation
 
+# Optional import for Allure reporting
+try:
+    import allure
+    ALLURE_AVAILABLE = True
+except ImportError:
+    ALLURE_AVAILABLE = False
+
 # --------------------
 # Configuration
 # --------------------
@@ -34,6 +41,7 @@ ENV_SUFFIX = "dev2"
 
 s3 = boto3.client("s3")
 glue = boto3.client("glue", region_name="us-east-1")
+logs = boto3.client("logs", region_name="us-east-1")
 
 # --------------------
 # AWS Credential Management (for long-running operations)
@@ -823,6 +831,138 @@ def wait_for_glue_success(job_name, timeout=600, upload_started_epoch=None):
     print("❌ Timeout waiting for Glue job to complete.")
     return False, run_id, f"Timeout waiting for Glue run {run_id} to complete"
 
+def get_glue_job_logs(job_name, run_id, evidence_dir=None, max_messages=200):
+    """
+    Fetch CloudWatch Logs for a specific Glue job run and optionally save to evidence folder.
+    
+    Returns dict with:
+      - output_logs: list of output log messages
+      - error_logs: list of error log messages
+      - file_operations: list of S3 file operation messages
+      - errors_found: list of error/exception messages
+    """
+    log_analysis = {
+        "output_logs": [],
+        "error_logs": [],
+        "file_operations": [],
+        "errors_found": []
+    }
+    
+    # CloudWatch log group names for Glue jobs
+    log_groups = {
+        "output": f"/aws-glue/jobs/output",
+        "error": f"/aws-glue/jobs/error"
+    }
+    
+    print(f"📋 Fetching CloudWatch logs for Glue run: {run_id}")
+    
+    for log_type, log_group in log_groups.items():
+        try:
+            # Find log streams for this specific run ID
+            streams_response = logs.describe_log_streams(
+                logGroupName=log_group,
+                logStreamNamePrefix=run_id,
+                orderBy="LastEventTime",
+                descending=True,
+                limit=5
+            )
+            
+            streams = streams_response.get("logStreams", [])
+            if not streams:
+                print(f"ℹ️ No {log_type} log streams found for run {run_id}")
+                continue
+            
+            # Fetch events from each stream
+            for stream in streams:
+                stream_name = stream["logStreamName"]
+                print(f"  📄 Reading stream: {stream_name}")
+                
+                try:
+                    events_response = logs.get_log_events(
+                        logGroupName=log_group,
+                        logStreamName=stream_name,
+                        limit=max_messages,
+                        startFromHead=True
+                    )
+                    
+                    events = events_response.get("events", [])
+                    for event in events:
+                        message = event.get("message", "")
+                        timestamp = event.get("timestamp", 0)
+                        
+                        # Store in appropriate list
+                        if log_type == "output":
+                            log_analysis["output_logs"].append(message)
+                        else:
+                            log_analysis["error_logs"].append(message)
+                        
+                        # Extract file operations (S3 putObject, copyObject, deleteObject, etc.)
+                        if any(keyword in message.lower() for keyword in ["s3:", "bucket", "putobject", "copyobject", "deleteobject", "archive", "ready", ".parquet"]):
+                            log_analysis["file_operations"].append(message)
+                        
+                        # Extract errors/exceptions
+                        if any(keyword in message.lower() for keyword in ["error", "exception", "failed", "traceback"]):
+                            log_analysis["errors_found"].append(message)
+                
+                except Exception as stream_error:
+                    print(f"  ⚠️ Could not read stream {stream_name}: {stream_error}")
+        
+        except Exception as group_error:
+            print(f"⚠️ Could not access {log_type} log group {log_group}: {group_error}")
+    
+    # Print summary
+    print(f"📊 Log Summary:")
+    print(f"  - Output messages: {len(log_analysis['output_logs'])}")
+    print(f"  - Error messages: {len(log_analysis['error_logs'])}")
+    print(f"  - File operations detected: {len(log_analysis['file_operations'])}")
+    print(f"  - Errors/exceptions found: {len(log_analysis['errors_found'])}")
+    
+    # Save to evidence directory if provided
+    if evidence_dir and (log_analysis["output_logs"] or log_analysis["error_logs"]):
+        os.makedirs(evidence_dir, exist_ok=True)
+        
+        # Save output logs
+        if log_analysis["output_logs"]:
+            output_log_file = os.path.join(evidence_dir, f"glue_output_logs_{run_id}.txt")
+            with open(output_log_file, "w", encoding="utf-8") as f:
+                f.write(f"Glue Job Output Logs - Run ID: {run_id}\n")
+                f.write(f"Job Name: {job_name}\n")
+                f.write("=" * 80 + "\n\n")
+                f.write("\n".join(log_analysis["output_logs"]))
+            print(f"  💾 Saved output logs: {output_log_file}")
+        
+        # Save error logs
+        if log_analysis["error_logs"]:
+            error_log_file = os.path.join(evidence_dir, f"glue_error_logs_{run_id}.txt")
+            with open(error_log_file, "w", encoding="utf-8") as f:
+                f.write(f"Glue Job Error Logs - Run ID: {run_id}\n")
+                f.write(f"Job Name: {job_name}\n")
+                f.write("=" * 80 + "\n\n")
+                f.write("\n".join(log_analysis["error_logs"]))
+            print(f"  💾 Saved error logs: {error_log_file}")
+        
+        # Save file operations summary
+        if log_analysis["file_operations"]:
+            file_ops_file = os.path.join(evidence_dir, f"glue_file_operations_{run_id}.txt")
+            with open(file_ops_file, "w", encoding="utf-8") as f:
+                f.write(f"Glue Job File Operations - Run ID: {run_id}\n")
+                f.write(f"Job Name: {job_name}\n")
+                f.write("=" * 80 + "\n\n")
+                f.write("\n".join(log_analysis["file_operations"]))
+            print(f"  💾 Saved file operations: {file_ops_file}")
+        
+        # Save errors summary
+        if log_analysis["errors_found"]:
+            errors_file = os.path.join(evidence_dir, f"glue_errors_found_{run_id}.txt")
+            with open(errors_file, "w", encoding="utf-8") as f:
+                f.write(f"Glue Job Errors/Exceptions - Run ID: {run_id}\n")
+                f.write(f"Job Name: {job_name}\n")
+                f.write("=" * 80 + "\n\n")
+                f.write("\n".join(log_analysis["errors_found"]))
+            print(f"  💾 Saved errors: {errors_file}")
+    
+    return log_analysis
+
 # --------------------
 # Step 4: Validate S3 Outputs
 # --------------------
@@ -1004,6 +1144,43 @@ def run_test_scenario(file_type, seed=None, rows=50):
             GLUE_JOB_NAME,
             upload_started_epoch=upload_metadata.get("upload_started_epoch")
         )
+        
+        # Fetch Glue job logs for diagnostics (whether success or failure)
+        if glue_run_id and file_path:
+            test_output_dir = os.path.dirname(file_path)
+            evidence_dir = os.path.join(test_output_dir, "test evidence s3 ready folder")
+            print(f"\n>>> Step 4a: Fetching Glue job logs for diagnostics")
+            log_analysis = get_glue_job_logs(GLUE_JOB_NAME, glue_run_id, evidence_dir)
+            
+            # Print key findings
+            if log_analysis["errors_found"]:
+                print(f"  ⚠️ Found {len(log_analysis['errors_found'])} error messages in logs")
+                for error_msg in log_analysis["errors_found"][:3]:  # Show first 3
+                    print(f"    - {error_msg[:150]}...")
+                
+                # Attach errors to Allure report if available
+                if ALLURE_AVAILABLE:
+                    error_summary = "\n".join(log_analysis["errors_found"])
+                    allure.attach(
+                        error_summary,
+                        name=f"Glue Job Errors ({glue_run_id})",
+                        attachment_type=allure.attachment_type.TEXT
+                    )
+            
+            if log_analysis["file_operations"]:
+                print(f"  📁 Found {len(log_analysis['file_operations'])} file operations")
+                for file_op in log_analysis["file_operations"][:3]:  # Show first 3
+                    print(f"    - {file_op[:150]}...")
+                
+                # Attach file operations to Allure report if available
+                if ALLURE_AVAILABLE:
+                    file_ops_summary = "\n".join(log_analysis["file_operations"])
+                    allure.attach(
+                        file_ops_summary,
+                        name=f"Glue File Operations ({glue_run_id})",
+                        attachment_type=allure.attachment_type.TEXT
+                    )
+        
         if not glue_job_success:
             step_status["Step 4"] = f"Failed: {glue_reason}"
             raise Exception(f"❌ Glue job failed: {glue_reason}")
@@ -1681,6 +1858,43 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
             GLUE_JOB_NAME,
             upload_started_epoch=(upload_metadata or {}).get("upload_started_epoch")
         )
+        
+        # Fetch Glue job logs for diagnostics (whether success or failure)
+        if glue_run_id and file_path:
+            test_output_dir = os.path.dirname(file_path)
+            evidence_dir = os.path.join(test_output_dir, "test evidence s3 ready folder")
+            print(f"\n>>> Step 4a: Fetching Glue job logs for diagnostics")
+            log_analysis = get_glue_job_logs(GLUE_JOB_NAME, glue_run_id, evidence_dir)
+            
+            # Print key findings
+            if log_analysis["errors_found"]:
+                print(f"  ⚠️ Found {len(log_analysis['errors_found'])} error messages in logs")
+                for error_msg in log_analysis["errors_found"][:3]:  # Show first 3
+                    print(f"    - {error_msg[:150]}...")
+                
+                # Attach errors to Allure report if available
+                if ALLURE_AVAILABLE:
+                    error_summary = "\n".join(log_analysis["errors_found"])
+                    allure.attach(
+                        error_summary,
+                        name=f"Glue Job Errors ({glue_run_id})",
+                        attachment_type=allure.attachment_type.TEXT
+                    )
+            
+            if log_analysis["file_operations"]:
+                print(f"  📁 Found {len(log_analysis['file_operations'])} file operations")
+                for file_op in log_analysis["file_operations"][:3]:  # Show first 3
+                    print(f"    - {file_op[:150]}...")
+                
+                # Attach file operations to Allure report if available
+                if ALLURE_AVAILABLE:
+                    file_ops_summary = "\n".join(log_analysis["file_operations"])
+                    allure.attach(
+                        file_ops_summary,
+                        name=f"Glue File Operations ({glue_run_id})",
+                        attachment_type=allure.attachment_type.TEXT
+                    )
+        
         if not glue_job_success:
             step_status["Step 4"] = f"Failed: {glue_reason}"
             raise Exception(f"❌ Glue job failed: {glue_reason}")
