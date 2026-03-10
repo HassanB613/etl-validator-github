@@ -9,7 +9,6 @@ Test Run: Special Characters in AccountNumber Column
 Injects special characters '!!@@$$&&' into the AccountNumber column to test ETL validation.
 """
 
-@pytest.mark.skip(reason="Temporarily blocked to run half test suite")
 @allure.feature('ETL Validation')
 @allure.story('Invalid Data Handling')
 @allure.title('Test AccountNumber Column with Special Characters (!!@@$$&&)')

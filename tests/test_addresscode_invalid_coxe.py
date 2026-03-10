@@ -9,7 +9,6 @@ Test Run: Invalid Value in AddressCode Column
 Injects invalid value 'COXE' into the AddressCode column to test ETL validation.
 """
 
-@pytest.mark.skip(reason="Temporarily blocked to run half test suite")
 @allure.feature('ETL Validation')
 @allure.story('Invalid Data Handling')
 @allure.title('Test AddressCode Column with Invalid Value (COXE)')

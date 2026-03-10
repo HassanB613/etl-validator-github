@@ -9,7 +9,6 @@ Test Run: Special Characters in AddressCode Column
 Injects special characters '@#$%!!' into the AddressCode column to test ETL validation.
 """
 
-@pytest.mark.skip(reason="Temporarily blocked to run half test suite")
 @allure.feature('ETL Validation')
 @allure.story('Invalid Data Handling')
 @allure.title('Test AddressCode Column with Special Characters (@#$%!!)')
