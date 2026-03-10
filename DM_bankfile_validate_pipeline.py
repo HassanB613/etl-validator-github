@@ -36,7 +36,6 @@ S3_PREFIX = "bankfile/ready"           # Update to the correct prefix
 ARCHIVE_PREFIX = "bankfile/archive/2025/07"
 ARCHIVE_PREFIX_2 = "bankfile/archive/2025/07"  # Dev2 archive prefix
 ERROR_CSV_PREFIX = "bankfile/error/"
-RUN_TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S")  # Global timestamp for filenames
 ENV_SUFFIX = "dev2"
 
 s3 = boto3.client("s3")
@@ -406,6 +405,28 @@ def get_error_count_from_db(ins_batch_id):
     finally:
         conn.close()
 
+def get_csv_data_row_count(local_path):
+    """
+    Count data rows in an error CSV by physical lines:
+    - row 1 is header
+    - row 2..N are data/error rows
+
+    This intentionally does NOT parse CSV fields, so malformed rows are still counted.
+    Returns integer row count.
+    """
+    try:
+        with open(local_path, "r", encoding="utf-8", errors="ignore") as f:
+            non_empty_lines = [line for line in f if line.strip()]
+
+        if not non_empty_lines:
+            return 0
+
+        # Exclude header row only; count all remaining lines as error rows.
+        return max(len(non_empty_lines) - 1, 0)
+    except Exception as e:
+        print(f"⚠️ Could not count CSV rows from file lines: {e}")
+        return 0
+
 def download_latest_error_csv_from_s3(local_evidence_dir):
     """
     Download the latest error CSV file from S3 error folder by LastModified date.
@@ -432,15 +453,10 @@ def download_latest_error_csv_from_s3(local_evidence_dir):
         s3.download_file(BUCKET, target_file["Key"], local_path)
         print(f"✅ Downloaded error file to: {local_path}")
         
-        # Count rows in CSV (excluding header)
-        try:
-            df = pd.read_csv(local_path)
-            row_count = len(df)
-            print(f"✅ Error CSV contains {row_count} data rows")
-            return local_path, row_count
-        except Exception as e:
-            print(f"⚠️ Could not read CSV to count rows: {e}")
-            return local_path, 0
+        # Count rows in CSV (excluding header), tolerant of malformed lines
+        row_count = get_csv_data_row_count(local_path)
+        print(f"✅ Error CSV contains {row_count} data rows")
+        return local_path, row_count
             
     except Exception as e:
         print(f"❌ Failed to download latest error CSV: {e}")
@@ -490,20 +506,15 @@ def download_latest_error_csv_in_window(local_evidence_dir, window_start_epoch=N
         s3.download_file(BUCKET, target_file["Key"], local_path)
         print(f"✅ Downloaded error file to: {local_path}")
 
-        try:
-            df = pd.read_csv(local_path)
-            row_count = len(df)
-            print(f"✅ Error CSV contains {row_count} data rows")
-            return local_path, row_count
-        except Exception as e:
-            print(f"⚠️ Could not read CSV to count rows: {e}")
-            return local_path, 0
+        row_count = get_csv_data_row_count(local_path)
+        print(f"✅ Error CSV contains {row_count} data rows")
+        return local_path, row_count
 
     except Exception as e:
         print(f"❌ Failed to download error CSV in run window: {e}")
         return None, 0
 
-def validate_error_file_with_database(glue_run_id, local_evidence_dir, timestamp=None, run_start_epoch=None, run_window_seconds=180, max_attempts=4, wait_seconds=30, wait_after_ready_seconds=120):
+def validate_error_file_with_database(glue_run_id, local_evidence_dir, run_start_epoch=None, run_window_seconds=180, max_attempts=4, wait_seconds=30, wait_after_ready_seconds=120):
     """
     Full database validation workflow for error file testing:
     1. Get BATCH_ID from JOB_CONTROL using Glue Run ID (JOB_ID column)
@@ -532,7 +543,7 @@ def validate_error_file_with_database(glue_run_id, local_evidence_dir, timestamp
         now_epoch = time.time()
         if now_epoch < target_check_epoch:
             sleep_seconds = int(target_check_epoch - now_epoch)
-            print(f"⏳ Waiting {sleep_seconds}s after ready-folder empty before checking error folder...")
+            print(f"⏳ Waiting {sleep_seconds}s after run start before checking error folder...")
             time.sleep(max(sleep_seconds, 0))
     
     for attempt in range(1, max_attempts + 1):
@@ -560,7 +571,7 @@ def validate_error_file_with_database(glue_run_id, local_evidence_dir, timestamp
             print("❌ Could not count errors in database. Validation failed.")
             return False, details
 
-        # Step 3: Download newest error CSV after ready-folder empty time
+        # Step 3: Download newest error CSV after run start time
         csv_path = None
         csv_error_count = 0
         csv_path, csv_error_count = download_latest_error_csv_in_window(
@@ -915,12 +926,12 @@ def get_glue_job_logs(job_name, run_id, evidence_dir=None, max_messages=200):
             streams_response = logs.describe_log_streams(
                 logGroupName=log_group,
                 logStreamNamePrefix=run_id,
-                orderBy="LastEventTime",
-                descending=True,
-                limit=5
+                limit=50
             )
-            
+
             streams = streams_response.get("logStreams", [])
+            streams.sort(key=lambda stream: stream.get("lastEventTimestamp", 0), reverse=True)
+            streams = streams[:5]
             if not streams:
                 print(f"ℹ️ No {log_type} log streams found for run {run_id}")
                 continue
@@ -1016,33 +1027,6 @@ def get_glue_job_logs(job_name, run_id, evidence_dir=None, max_messages=200):
     
     return log_analysis
 
-# --------------------
-# Step 4: Validate S3 Outputs
-# --------------------
-def check_s3_file_exists(prefix):
-    """
-    Check if a file exists in the S3 bucket with a specific prefix and exact timestamp.
-    The search will match the full file name, including seconds (YYYYMMDD.HHMMSS).
-    """
-    print(f"🔍 Checking S3 prefix {prefix} for the exact file name...")
-    try:
-        result = s3.list_objects_v2(Bucket=BUCKET, Prefix=prefix)
-        
-        # Use the global RUN_TIMESTAMP
-        expected_filename = f"DMBankErrorfile.{RUN_TIMESTAMP}.csv"
-        
-        for obj in result.get("Contents", []):
-            # Check if the file name matches the expected file name
-            if obj["Key"].endswith(expected_filename):
-                print(f"✅ Found: {obj['Key']}")
-                return True
-        
-        print(f"❌ No file found in {prefix} matching the exact file name ({expected_filename})")
-    except Exception as e:
-        print(f"⚠️ Failed to check S3 file: {str(e)}")
-        print(f"ℹ️ Skipping S3 check. Please configure AWS credentials if S3 access is required.")
-    return False
-
 def check_s3_file_exists(prefix, keyword):
     print(f"🔍 Checking S3 prefix {prefix} for file containing '{keyword}'...")
     result = s3.list_objects_v2(Bucket=BUCKET, Prefix=prefix)
@@ -1069,8 +1053,7 @@ def check_s3_file_exists_with_naming_convention(prefix, timestamp):
             print(f"✅ Found: {obj['Key']}")
             return True
     
-    # Change ❌ to ⭐ for success in Step 5
-    print(f"⭐ No file found in {prefix} matching the naming convention ({expected_filename})")
+    print(f"ℹ️ No file found in {prefix} matching the naming convention ({expected_filename})")
     return False
 
 # --------------------
@@ -1174,6 +1157,7 @@ def run_test_scenario(file_type, seed=None, rows=50):
         "Step 8": "Skipped"  # Database validation (only for invalid/error scenarios)
     }
     file_path = None  # Initialize file_path
+    upload_metadata = {}
     glue_run_id = None  # Track Glue run ID for database validation
     glue_completed_epoch = None
     ready_folder_empty_epoch = None
@@ -1300,11 +1284,11 @@ def run_test_scenario(file_type, seed=None, rows=50):
         if not is_valid and glue_run_id:
             test_output_dir = os.path.dirname(file_path) if file_path else "./test_output"
             evidence_dir = os.path.join(test_output_dir, "test evidence s3 ready folder")
+            validation_window_start_epoch = upload_metadata.get("upload_started_epoch") or ready_folder_empty_epoch
             db_validation_passed, db_details = validate_error_file_with_database(
                 glue_run_id,
                 evidence_dir,
-                timestamp=timestamp,
-                run_start_epoch=ready_folder_empty_epoch,
+                run_start_epoch=validation_window_start_epoch,
                 run_window_seconds=180,
                 wait_after_ready_seconds=120,
             )
@@ -1315,7 +1299,7 @@ def run_test_scenario(file_type, seed=None, rows=50):
         elif is_valid:
             step_status["Step 8"] = "Skipped (valid scenario - no errors expected)"
 
-        print("\nDebugging Step Statuses:")
+        print("\nStep Statuses:")
         for step, status in step_status.items():
             print(f"{step}: {status}")
 
@@ -1338,8 +1322,13 @@ def run_test_scenario(file_type, seed=None, rows=50):
             archive_prefix = f"bankfile/archive/{current_year}/{current_month}"
             archive_found, archive_downloaded = download_specific_archive_file(archive_prefix, timestamp, evidence_dir)
             
-            # Download only the specific expected error file for this timestamp
-            error_files = download_specific_error_file(ERROR_CSV_PREFIX, evidence_dir, timestamp)
+            # Download newest error file after this run started (same selection logic as Step 8)
+            evidence_window_start_epoch = upload_metadata.get("upload_started_epoch") or ready_folder_empty_epoch
+            error_files = download_specific_error_file(
+                ERROR_CSV_PREFIX,
+                evidence_dir,
+                run_start_epoch=evidence_window_start_epoch,
+            )
             
             # Save S3 listings for reference
             save_s3_listing_to_file(ERROR_CSV_PREFIX, evidence_dir, "s3_error_listing_before_delete.txt")
@@ -1713,7 +1702,7 @@ def run_composite_transform_scenario(rename_specs=None, invalid_values=None, dro
         tag_parts.append("drop" + "_".join(drop_list))
     if invalid_list:
         tag_parts.append("inv")
-    tag = "__".join(tag_parts) if tag_parts else "composite"
+    tag = "_".join(tag_parts) if tag_parts else "composite"
     return run_full_etl_pipeline_with_existing_file(
         parquet_path,
         scenario_name=f"composite_{tag}",
@@ -1780,7 +1769,6 @@ def run_duplicate_row_scenario(row_index=0, rows=50, timestamp=None):
     )
 
 # New scenario: duplicate PayeeID across two rows
-import re
 
 def run_duplicate_payee_id_scenario(rows=50, formats=["parquet"], seed=None, timestamp=None):
     """
@@ -1849,17 +1837,42 @@ def check_expected_error_file_exists(prefix, timestamp):
         print(f"ℹ️ Skipping error file check. Please configure AWS credentials if S3 access is required.")
         return None
 
-def download_specific_error_file(s3_prefix, local_evidence_dir, timestamp):
+def download_specific_error_file(s3_prefix, local_evidence_dir, run_start_epoch=None):
     """
-    Download only the specific expected error file (by exact filename) to the evidence directory.
-    Expected filename: mtfdm_{ENV_SUFFIX}_dmbankerrorfile_{timestamp}.csv
+    Download error file to the evidence directory.
+
+    Selection logic:
+    - run_start_epoch is required
+    - download the newest CSV with LastModified >= run_start_epoch
+
     Returns 1 if file was downloaded, 0 otherwise.
     """
     try:
-        error_file_key = check_expected_error_file_exists(s3_prefix, timestamp)
-        if not error_file_key:
-            print(f"ℹ️ Expected error file not found for timestamp '{timestamp}'")
+        if not run_start_epoch:
+            print("ℹ️ run_start_epoch is required for evidence error-file selection. Skipping error download.")
             return 0
+
+        result = s3.list_objects_v2(Bucket=BUCKET, Prefix=s3_prefix)
+        contents = result.get("Contents", [])
+        csv_files = [obj for obj in contents if obj["Key"].endswith(".csv")]
+
+        matching_files = []
+        for obj in csv_files:
+            try:
+                modified_epoch = obj["LastModified"].timestamp()
+            except Exception:
+                continue
+            if modified_epoch >= run_start_epoch:
+                matching_files.append(obj)
+
+        if matching_files:
+            matching_files.sort(key=lambda x: x["LastModified"], reverse=True)
+            error_file_key = matching_files[0]["Key"]
+            print(f"🔍 Using newest error file after run start: {error_file_key}")
+        else:
+            print(f"ℹ️ No error CSV found after run start epoch {datetime.fromtimestamp(run_start_epoch)}")
+            return 0
+
         os.makedirs(local_evidence_dir, exist_ok=True)
         local_path = os.path.join(local_evidence_dir, os.path.basename(error_file_key))
         print(f"⬇️ Downloading error file {error_file_key} to {local_path}")
@@ -1996,11 +2009,11 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
         if glue_run_id:
             test_output_dir = os.path.dirname(file_path) if file_path else "./test_output"
             evidence_dir = os.path.join(test_output_dir, "test evidence s3 ready folder")
+            validation_window_start_epoch = (upload_metadata or {}).get("upload_started_epoch") or ready_folder_empty_epoch
             db_validation_passed, db_details = validate_error_file_with_database(
                 glue_run_id,
                 evidence_dir,
-                timestamp=timestamp,
-                run_start_epoch=ready_folder_empty_epoch,
+                run_start_epoch=validation_window_start_epoch,
                 run_window_seconds=180,
                 wait_after_ready_seconds=120,
             )
@@ -2026,8 +2039,13 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
             archive_prefix = f"bankfile/archive/{current_year}/{current_month}"
             archive_found, archive_downloaded = download_specific_archive_file(archive_prefix, timestamp, evidence_dir)
             
-            # Download only the specific expected error file for this timestamp
-            error_files = download_specific_error_file(ERROR_CSV_PREFIX, evidence_dir, timestamp)
+            # Download newest error file after this run started (same selection logic as Step 7)
+            evidence_window_start_epoch = (upload_metadata or {}).get("upload_started_epoch") or ready_folder_empty_epoch
+            error_files = download_specific_error_file(
+                ERROR_CSV_PREFIX,
+                evidence_dir,
+                run_start_epoch=evidence_window_start_epoch,
+            )
             
             # Save S3 listings for reference
             save_s3_listing_to_file(ERROR_CSV_PREFIX, evidence_dir, "s3_error_listing_before_delete.txt")
