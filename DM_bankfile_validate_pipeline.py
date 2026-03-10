@@ -448,11 +448,11 @@ def download_latest_error_csv_from_s3(local_evidence_dir):
 
 def download_latest_error_csv_in_window(local_evidence_dir, window_start_epoch=None, window_seconds=180):
     """
-    Download the newest error CSV within a run window.
+        Download the newest error CSV after a run start epoch.
 
-    Window logic:
-      - LastModified must be >= window_start_epoch
-      - LastModified must be <= window_start_epoch + window_seconds
+        Match logic:
+            - LastModified must be >= window_start_epoch
+            - No upper time bound is enforced (window_seconds kept for backward compatibility)
 
     Returns (local_file_path, row_count) or (None, 0) if not found.
     """
@@ -468,26 +468,22 @@ def download_latest_error_csv_in_window(local_evidence_dir, window_start_epoch=N
             print(f"❌ No CSV files found in s3://{BUCKET}/{ERROR_CSV_PREFIX}")
             return None, 0
 
-        window_end_epoch = window_start_epoch + window_seconds
         matching_files = []
         for obj in csv_files:
             try:
                 modified_epoch = obj["LastModified"].timestamp()
             except Exception:
                 continue
-            if window_start_epoch <= modified_epoch <= window_end_epoch:
+            if modified_epoch >= window_start_epoch:
                 matching_files.append(obj)
 
         if not matching_files:
-            print(
-                f"❌ No error CSV found in run window "
-                f"[{datetime.fromtimestamp(window_start_epoch)}, {datetime.fromtimestamp(window_end_epoch)}]"
-            )
+            print(f"❌ No error CSV found after epoch {datetime.fromtimestamp(window_start_epoch)}")
             return None, 0
 
         matching_files.sort(key=lambda x: x["LastModified"], reverse=True)
         target_file = matching_files[0]
-        print(f"📥 Downloading newest error file in run window: {target_file['Key']} (Modified: {target_file['LastModified']})")
+        print(f"📥 Downloading newest error file after run start: {target_file['Key']} (Modified: {target_file['LastModified']})")
 
         os.makedirs(local_evidence_dir, exist_ok=True)
         local_path = os.path.join(local_evidence_dir, os.path.basename(target_file["Key"]))
@@ -507,7 +503,7 @@ def download_latest_error_csv_in_window(local_evidence_dir, window_start_epoch=N
         print(f"❌ Failed to download error CSV in run window: {e}")
         return None, 0
 
-def validate_error_file_with_database(glue_run_id, local_evidence_dir, timestamp=None, run_start_epoch=None, run_window_seconds=180, max_attempts=4, wait_seconds=30):
+def validate_error_file_with_database(glue_run_id, local_evidence_dir, timestamp=None, run_start_epoch=None, run_window_seconds=180, max_attempts=4, wait_seconds=30, wait_after_ready_seconds=120):
     """
     Full database validation workflow for error file testing:
     1. Get BATCH_ID from JOB_CONTROL using Glue Run ID (JOB_ID column)
@@ -530,6 +526,14 @@ def validate_error_file_with_database(glue_run_id, local_evidence_dir, timestamp
     if not glue_run_id:
         print("⚠️ No Glue Run ID provided. Skipping database validation.")
         return False, details
+
+    if run_start_epoch:
+        target_check_epoch = run_start_epoch + wait_after_ready_seconds
+        now_epoch = time.time()
+        if now_epoch < target_check_epoch:
+            sleep_seconds = int(target_check_epoch - now_epoch)
+            print(f"⏳ Waiting {sleep_seconds}s after ready-folder empty before checking error folder...")
+            time.sleep(max(sleep_seconds, 0))
     
     for attempt in range(1, max_attempts + 1):
         print(f"🔁 Validation attempt {attempt}/{max_attempts}")
@@ -556,7 +560,7 @@ def validate_error_file_with_database(glue_run_id, local_evidence_dir, timestamp
             print("❌ Could not count errors in database. Validation failed.")
             return False, details
 
-        # Step 3: Download newest error CSV in this run window
+        # Step 3: Download newest error CSV after ready-folder empty time
         csv_path = None
         csv_error_count = 0
         csv_path, csv_error_count = download_latest_error_csv_in_window(
@@ -1172,6 +1176,7 @@ def run_test_scenario(file_type, seed=None, rows=50):
     file_path = None  # Initialize file_path
     glue_run_id = None  # Track Glue run ID for database validation
     glue_completed_epoch = None
+    ready_folder_empty_epoch = None
     try:
         print(f"\n>>> Running test for scenario: {file_type.upper()}")
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -1253,6 +1258,7 @@ def run_test_scenario(file_type, seed=None, rows=50):
                 time.sleep(15)
             assert file_absent, f"❌ {file_type.capitalize()} file still found in S3 ready folder: {timestamp}"
             print(f"✅ {file_type.capitalize()} file is no longer in the S3 ready folder.")
+            ready_folder_empty_epoch = time.time()
         except AssertionError as e:
             step_status["Step 5"] = f"Failed: {str(e)}"
             print(str(e))
@@ -1298,8 +1304,9 @@ def run_test_scenario(file_type, seed=None, rows=50):
                 glue_run_id,
                 evidence_dir,
                 timestamp=timestamp,
-                run_start_epoch=glue_completed_epoch,
+                run_start_epoch=ready_folder_empty_epoch,
                 run_window_seconds=180,
+                wait_after_ready_seconds=120,
             )
             if db_validation_passed:
                 step_status["Step 8"] = f"Passed (DB={db_details['db_error_count']}, CSV={db_details['csv_error_count']})"
@@ -1903,6 +1910,7 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
     file_type = scenario_name
     glue_run_id = None  # Track Glue run ID for database validation
     glue_completed_epoch = None
+    ready_folder_empty_epoch = None
     try:
         print(f"\n>>> Running full ETL pipeline for scenario: {scenario_name}")
         print(">>> Step 3: Validate S3 outputs before triggering Glue job")
@@ -1966,6 +1974,7 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
             assert file_absent, f"❌ File still found in S3 ready folder: {timestamp}"
             print(f"✅ File is no longer in the S3 ready folder.")
             step_status["Step 5"] = "Passed"
+            ready_folder_empty_epoch = time.time()
         except AssertionError as e:
             step_status["Step 5"] = f"Failed: {str(e)}"
             print(str(e))
@@ -1991,8 +2000,9 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
                 glue_run_id,
                 evidence_dir,
                 timestamp=timestamp,
-                run_start_epoch=glue_completed_epoch,
+                run_start_epoch=ready_folder_empty_epoch,
                 run_window_seconds=180,
+                wait_after_ready_seconds=120,
             )
             if db_validation_passed:
                 step_status["Step 7"] = f"Passed (DB={db_details['db_error_count']}, CSV={db_details['csv_error_count']})"
