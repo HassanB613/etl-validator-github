@@ -6,19 +6,19 @@ import allure
 
 """
 Test Run: Invalid Value in OrganizationTINType Column
-Injects invalid value XZXZXZXZXZ into the OrganizationTINType column to test ETL validation.
+Injects invalid value XZXZ into the OrganizationTINType column to test ETL validation.
 """
 
 @allure.feature('ETL Validation')
 @allure.story('Invalid Data Handling')
-@allure.title('Test OrganizationTINType Column with Invalid Value XZXZXZXZXZ')
+@allure.title('Test OrganizationTINType Column with Invalid Value XZXZ')
 class TestOrganizationTINTypeXZXZ:
     
     @allure.description("""
     Test that pipeline rejects invalid value in OrganizationTINType column.
     
     Steps:
-    1. Generate invalid parquet file with value XZXZXZXZXZ in OrganizationTINType
+    1. Generate invalid parquet file with value XZXZ in OrganizationTINType
     2. Upload to S3 ready folder
     3. Trigger/monitor Glue job
     4. Verify file removed from ready folder
@@ -32,7 +32,7 @@ class TestOrganizationTINTypeXZXZ:
         Test that pipeline rejects invalid value in OrganizationTINType column.
         
         Steps:
-        1. Generate invalid parquet file with value XZXZXZXZXZ in OrganizationTINType
+        1. Generate invalid parquet file with value XZXZ in OrganizationTINType
         2. Upload to S3 ready folder
         3. Trigger/monitor Glue job
         4. Verify file removed from ready folder
@@ -44,19 +44,19 @@ class TestOrganizationTINTypeXZXZ:
         base_dir = os.path.dirname(os.path.dirname(__file__))
         pipeline_path = os.path.join(base_dir, "DM_bankfile_validate_pipeline.py")
 
-        # Run the pipeline with invalid value XZXZXZXZXZ injected into OrganizationTINType column
+        # Run the pipeline with invalid value XZXZ injected into OrganizationTINType column
         pipe_command = [
             sys.executable, pipeline_path,
-            "--invalid-values", "OrganizationTINType:XZXZXZXZXZ",
+            "--invalid-values", "OrganizationTINType:XZXZ",
             "--dev2",
             "--rows", "25"
         ]
         
-        with allure.step("Inject invalid value XZXZXZXZXZ into OrganizationTINType column"):
+        with allure.step("Inject invalid value XZXZ into OrganizationTINType column"):
             print("=" * 60)
-            print("TEST: Invalid Value 'XZXZXZXZXZ' in OrganizationTINType Column")
+            print("TEST: Invalid Value 'XZXZ' in OrganizationTINType Column")
             print("=" * 60)
-            print(f"Injecting: XZXZXZXZXZ into OrganizationTINType column")
+            print(f"Injecting: XZXZ into OrganizationTINType column")
             print(f"Command: {' '.join(pipe_command)}")
             print("=" * 60)
         
