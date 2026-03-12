@@ -1,0 +1,11 @@
+RecordOperation,OrganizationCode,PayeeID,OrganizationIdentifier,OrganizationName,OrganizationLegalName,OrganizationTIN,OrganizationTINType,ProfitNonprofit,OrganizationNPI,PaymentMode,RoutingTransitNumber,AccountNumber,AccountType,EffectiveStartDate,EffectiveEndDate,AddressCode,AddressLine1,AddressLine2,CityName,State,PostalCode,ContactCode,ContactFirstName,ContactLastName,ContactTitle,ContactPhone,ContactFax,ContactOtherPhone,ContactEmail
+A,M,MFR003,MFR003,"Merck & Co., Inc.","Merck & Co., Inc.",867883954,EIN,NP,5754136343,EFT,691161182,744863,SAVING,,,,,,,,,AO,Christopher,Bishop,,001-694-732-6131x55797,,,danielpeterson@example.com
+A,R,DISP5415,4163516444,AstraZeneca PLC,Brianna Phillips,,,,5740200609,CHK,,,,,,,,,,,,AO,,,,+1-456-824-6389x9107,,+1-549-440-0738x830,teresaflores@example.com
+D,P,PC2529560,PC2529560,AstraZeneca PLC,AstraZeneca PLC,019266122,EIN,NP,,CHK,,,,,,PMT,448 Villegas Course,Suite 756,Fordfort,VA,00677,DO,Lindsey,Walker,,+1-256-804-7954x4766,+1-692-872-8524x698,551.627.5972,laurasmith@example.net
+A,R,DISP55992,6654586611,Amgen Inc.,Justin Lopez,,,,4471129450,CHK,,,,,,,,,,,,AO,,,,3397750640,,,triciawilson@example.org
+A,R,DISP25616,5447862579,Alnylam Pharmaceuticals,Michelle Ramos,,,,3238569554,CHK,,,,,,,,,,,,AO,,,,852-222-8281,,675.630.0515x88558,eric70@example.org
+D,R,DISP69988,3733751546,"Merck & Co., Inc.",Emma Dean,,,,4248249501,CHK,,,,,2026-03-11,,,,,,,DO,,,,001-601-240-0746,,001-565-547-2974x0703,lbarnett@example.com
+A,M,MFR001,MFR001,Pfizer Inc.,Derek Hernandez,962531007,SSN,NP,7883129916,EFT,698630843,924584,SAVING,,,,,,,,,AO,Brenda,Hill,,504-570-1674x369,,,bradleygonzalez@example.net
+D,M,MFR002,MFR002,Johnson & Johnson,Denise Short,729837376,SSN,P,5548615723,EFT,523958939,660424,SAVING,,2026-03-11,,,,,,,DO,Samantha,Morris,,(452)993-7084x333,5338208842,,lopezjesse@example.net
+D,P,PC61105,PC61105,Johnson & Johnson,Julie Tate,117258557,SSN,NP,2091929981,EFT,487553927,098265,CHKING,,2026-04-26,PMT,274 Hardy Forges,,Lake Andreamouth,VI,03070,AO,Elizabeth,Miller,"Designer, exhibition/di",+1-440-532-3720x0059,441.533.4414x7866,,ztorres@example.com
+A,M,MFR115026,MFR115026,GlaxoSmithKline (GSK),GlaxoSmithKline (GSK),040722969,EIN,P,,EFT,336778774,881017,SAVING,,,,,,,,,DO,Jodi,Thornton,,214-575-4393x1657,,(575)606-1562,douglas62@example.com

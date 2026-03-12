@@ -1,0 +1,69 @@
+Glue Job File Operations - Run ID: jr_5789b243f690e440ae828ab08580a56ec1394371083e46d69ea5895f563c417a
+Job Name: load-bank-file-stg-dev2
+================================================================================
+
+DEBUG: valid_paths = ['s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_152256.parquet']
+
+S3 access OK for: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_152256.parquet
+Reading single parquet file: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_152256.parquet
+
+Error data written to: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/tempfolder
+
+Renamed and copied to: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/error/mtfdm_dev2_DMBankErrorfile_20260310_152536.csv
+
+Deleted temporary folder: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/tempfolder/
+
+Success,mtfdm_dev2_dmbankdata_20260310_152256.parquet,10, 0,10,None
+Moved: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_152256.parquet to s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/archive/2026/03/mtfdm_dev2_dmbankdata_20260310_152256.parquet
+
+Moved Parquet file to archive.
+
+26/03/10 19:24:53 INFO Executor: Unpacking an archive spark://10.157.136.94:44119/files/glue-job-10211728395990125264_glue_venv.zip#python_environment from /tmp/spark-8021bbb4-e372-4f7f-a1b0-a51ff3614520/glue-job-10211728395990125264_glue_venv.zip to /tmp/./python_environment
+
+26/03/10 19:24:58 INFO CoarseGrainedExecutorBackend: eagerFSInit: Eagerly initialized FileSystem at s3://does/not/exist in 5075 ms
+
+26/03/10 19:25:13 INFO S3NativeFileSystem: Opening 's3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_152256.parquet' for reading
+
+26/03/10 19:25:14 INFO S3NativeFileSystem: Opening 's3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_152256.parquet' for reading
+
+26/03/10 19:25:17 INFO S3NativeFileSystem: Opening 's3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_152256.parquet' for reading
+
+26/03/10 19:25:17 INFO S3NativeFileSystem: Opening 's3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_152256.parquet' for reading
+
+26/03/10 19:25:17 INFO S3NativeFileSystem: Opening 's3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_152256.parquet' for reading
+
+26/03/10 19:25:17 INFO FileScanRDD: TID: 4 - Got next file: path: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_152256.parquet, range: 0-19423, partition values: [empty row], isDataPresent: true, eTag: c7aa32249ca1ca2cc39091d953bb6e64. Elapsed time: 246751 micros
+
+26/03/10 19:25:17 INFO FileScanRDD: TID: 4 - Reading current file: path: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_152256.parquet, range: 0-19423, partition values: [empty row], isDataPresent: true, eTag: c7aa32249ca1ca2cc39091d953bb6e64
+
+26/03/10 19:25:20 INFO S3NativeFileSystem: Opening 's3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_152256.parquet' for reading
+
+26/03/10 19:25:20 INFO S3NativeFileSystem: Opening 's3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_152256.parquet' for reading
+
+26/03/10 19:25:20 INFO AsyncFileDownloader: TID: 6 - Downloading ParquetFileChunkGroup(path=s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_152256.parquet, ordinal=0), downloadSize=4.4 KiB, numChunks=1, parallelizedChunks=false
+
+26/03/10 19:25:20 INFO S3NativeFileSystem: Opening 's3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_152256.parquet' for reading
+
+26/03/10 19:25:20 INFO AsyncFileDownloader: TID: 6 - Downloaded ParquetFileChunkGroup(path=s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_152256.parquet, ordinal=0), elapsedTime=84081 micros
+
+26/03/10 19:25:20 INFO FileScanRDD: TID: 6 - Got next file: path: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_152256.parquet, range: 0-19423, partition values: [empty row], isDataPresent: true, eTag: c7aa32249ca1ca2cc39091d953bb6e64. Elapsed time: 50 micros
+
+26/03/10 19:25:20 INFO FileScanRDD: TID: 6 - Reading current file: path: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_152256.parquet, range: 0-19423, partition values: [empty row], isDataPresent: true, eTag: c7aa32249ca1ca2cc39091d953bb6e64
+
+/etc/alternatives/jre/bin/java --add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED --add-exports=jdk.naming.dns/com.sun.jndi.dns=java.naming --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.math=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.util.concurrent=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.time=ALL-UNNAMED --add-opens=java.base/java.util.regex=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/sun.nio.cs=ALL-UNNAMED --add-opens=java.base/sun.util.calendar=ALL-UNNAMED --add-opens=java.base/sun.security.action=ALL-UNNAMED --add-opens=java.base/jdk.internal=ALL-UNNAMED --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED --add-opens=java.base/jdk.internal.reflect=ALL-UNNAMED --add-opens=java.base/jdk.internal.util=ALL-UNNAMED --add-opens=java.base/jdk.internal.util.random=ALL-UNNAMED --add-opens=java.sql/java.sql=ALL-UNNAMED --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED -XX:+IgnoreUnrecognizedVMOptions -Djavax.net.ssl.trustStore=/opt/amazon/certs/InternalAndExternalAndAWSTrustStore.jks -Djavax.net.ssl.trustStoreType=JKS -Djavax.net.ssl.trustStorePassword=amazon -DRDS_ROOT_CERT_PATH=/opt/amazon/certs/rds-combined-ca-bundle.pem -DREDSHIFT_ROOT_CERT_PATH=/opt/amazon/certs/redshift-ssl-ca-cert.pem -DRDS_TRUSTSTORE_URL=file:/opt/amazon/certs/InternalAndExternalAndAWSTrustStore.jks -cp /usr/share/aws/aws-glue-shuffle/*:/usr/share/aws/emr-glue-bootstrap/*:/usr/lib/spark/jars/*:/usr/lib/spark/conf:/usr/share/aws/aws-java-sdk-v2/*:/usr/share/aws/*:/usr/share/aws/hmclient/lib/aws-glue-datacatalog-spark-client.jar:/usr/share/aws/hmclient/lib/*:/usr/share/aws/iceberg/lib/*:/usr/share/aws/delta/lib/*:/usr/lib/hudi/*:/usr/share/aws/redshift/jdbc/*:/usr/share/aws/redshift/spark-redshift/lib/*:/usr/share/aws/glue-connectors/lib/*:/usr/share/aws/glue-pii-dependencies/lib/*:/usr/share/aws/datazone-openlineage-spark/lib/*:/usr/lib/hadoop/lib/*::/usr/lib/hadoop-lzo/lib/*:/usr/share/aws/aws-java-sdk/*:/usr/share/aws/emr/emrfs/conf:/usr/share/aws/emr/emrfs/lib/*:/usr/share/aws/emr/emrfs/auxlib/*:/usr/share/aws/emr/ddb/lib/emr-ddb-hadoop.jar:/usr/share/aws/emr/goodies/lib/emr-hadoop-goodies.jar:/usr/share/aws/emr/cloudwatch-sink/lib/*:/usr/share/aws/emr/security/conf:/usr/share/aws/emr/security/lib/*:/usr/lib/hadoop/*:/etc/hadoop/conf:/usr/share/java/Hive-JSON-Serde/* -Dlog4j2.configurationFile=/etc/spark/conf.dist/log4j2.properties com.amazonaws.services.glue.GlueBootstrap --conf spark.dynamicAllocation.enabled=true --conf spark.shuffle.service.enabled=true --conf spark.dynamicAllocation.minExecutors=1 --conf spark.dynamicAllocation.maxExecutors=1 --conf spark.executor.memory=10g --conf spark.driver.memory=10g --conf spark.network.timeout=600 --PREFIX bankfile/ready/  --USER load-bank-file-stg --REC_EMAIL DL-MTF_PM_IT_Ops@elevancehealth.com,achamyeleh.ewunetu@elevancehealth.com,***********@elevancehealth.com --TGT_PREFIX bankfile/error/ --internal-lib-urls https://prod-us-east-1-package-distribution-artifacts-bucket.s3.amazonaws.com/007/Glue5.0/aws-glue-dataplane-python/java17/5.0.950/njFdJ6-AWSGlueDataplanePython-5.0.950.py.zip?[REDACTED],https://prod-us-east-1-package-distribution-artifacts-bucket.s3.amazonaws.com/007/Glue5.0/aws-glue-di-libs/java17/5.0.950/u3ZXGu-aws-glue-di-package-5.0.950.jar?[REDACTED],https://prod-us-east-1-package-distribution-artifacts-bucket.s3.amazonaws.com/007/Glue5.0/AwsGlueMLLibsPython/java17/5.0.463/0zp0Wh-AwsGlueMLLibs.py.zip?[REDACTED],https://prod-us-east-1-package-distribution-artifacts-bucket.s3.amazonaws.com/007/Glue5.0/AwsGlueMLLibs/java17/5.0.463/awfyjZ-AwsGlueMLLibs.jar?[REDACTED] --RDS RDS2connection  --JOB_ID j_377b3f550ccec06bf7fb8524f26582613d4b75a2976c9ce4ede2fd140da1e989 --spark-event-logs-path s3://aws-glue-assets-448049811908-us-east-1/sparkHistoryLogs/  --enable-observability-metrics true  --SEND_EMAIL noreply-mtf-pm@cms.hhs.gov --TEMP_PREFIX bankfile/tempfolder/ --JOB_NAME load-bank-file-stg-dev2 --ENV dev2  --connection-names RDSconnection  --enable-glue-datacatalog true --glue-di-packages-correlation-ids 20260305-163334_,20260305-163334_,6416010234,6416010234 --job-bookmark-option job-bookmark-disable --TempDir s3://aws-glue-assets-448049811908-us-east-1/temporary/ --BUCKET mtfpm-dev2-s3-mtfdmstaging-us-east-1 --enable-metrics true --enable-job-insights true  --JOB_RUN_ID jr_5789b243f690e440ae828ab08580a56ec1394371083e46d69ea5895f563c417a --scriptLocation s3://mtf-pm-glue-dev2-scripts/scripts/load-bank-file-stg-dev2.py --job-language python --tenant-internal glue
+
+INFO	2026-03-10T19:23:42,561	17412	com.amazonaws.services.glue.FileDownloader	[main]	96	downloading s3://mtf-pm-glue-dev2-scripts/scripts/load-bank-file-stg-dev2.py file to destination location: /tmp/glue-job-10211728395990125264/load-bank-file-stg-dev2.py
+
+INFO	2026-03-10T19:23:43,150	18001	com.amazonaws.services.glue.utils.AWSS3Utils$	[main]	29	Encoding S3 URI s3://mtf-pm-glue-dev2-scripts/scripts/load-bank-file-stg-dev2.py
+
+INFO	2026-03-10T19:23:43,150	18001	com.amazonaws.services.glue.utils.AWSS3Utils$	[main]	34	Encoded S3 URI to s3://mtf-pm-glue-dev2-scripts/scripts/load-bank-file-stg-dev2.py
+
+INFO	2026-03-10T19:23:43,159	18010	com.amazonaws.services.glue.FileDownloader	[main]	139	Download bucket: mtf-pm-glue-dev2-scripts key: scripts/load-bank-file-stg-dev2.py to /tmp/glue-job-10211728395990125264/load-bank-file-stg-dev2.py with usingProxy: false and isProxyDisabled: false
+
+INFO	2026-03-10T19:24:28,055	24374	org.apache.spark.SparkContext	[Thread-10]	60	Added archive /tmp/glue-job-10211728395990125264_glue_venv.zip#python_environment at spark://10.157.136.94:44119/files/glue-job-10211728395990125264_glue_venv.zip with timestamp 1773170666907
+
+INFO	2026-03-10T19:24:28,124	24443	org.apache.spark.SparkContext	[Thread-10]	60	Unpacking an archive /tmp/glue-job-10211728395990125264_glue_venv.zip#python_environment from /tmp/spark-13934869-bf55-4e52-940d-cb6be8e712e6/glue-job-10211728395990125264_glue_venv.zip to /tmp/spark-d440c985-8649-4b9b-8395-d15c0cad4fc1/userFiles-8efcc1bb-c2ba-48be-95fd-b28b2a2c0021/python_environment
+
+INFO	2026-03-10T19:24:31,043	27362	org.apache.spark.scheduler.cluster.glue.JESSchedulerBackend	[Thread-10]	60	SchedulerBackend is ready for scheduling beginning after reached minRegisteredResourcesRatio: 0.0
+
+INFO	2026-03-10T19:24:39,598	35917	com.amazonaws.services.glue.LogPusher	[pool-6-thread-1]	60	uploading file:///var/log/spark/apps to s3://aws-glue-assets-448049811908-us-east-1/sparkHistoryLogs/

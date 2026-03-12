@@ -1,0 +1,29 @@
+Glue Job Output Logs - Run ID: jr_188f1bd639576a2bdb9f51eb88090f0ad00ad17a611ad05f66af94e791ff3eec
+Job Name: load-bank-file-stg-dev2
+================================================================================
+
+jr_188f1bd639576a2bdb9f51eb88090f0ad00ad17a611ad05f66af94e791ff3eec
+
+Stored procedure executed successfully.
+
+DEBUG: valid_paths = ['s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_163703.parquet']
+
+S3 access OK for: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_163703.parquet
+Reading single parquet file: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_163703.parquet
+
+['RecordOperation', 'OrganizationCode', 'PayeeID', 'OrganizationIdentifier', 'OrganizationName', 'OrganizationLegalName', 'OrganizationTIN', 'OrganizationTINType', 'ProfitNonprofit', 'OrganizationNPI', 'PaymentMode', 'RoutingTransitNumber', 'AccountNumber', 'AccountType', 'EffectiveStartDate', 'EffectiveEndDate', 'AddressCode', 'AddressLine1', 'AddressLine2', 'CityName', 'State', 'PostalCode', 'ContactCode', 'ContactFirstName', 'ContactLastName', 'ContactTitle', 'ContactPhone', 'ContactFax', 'ContactOtherPhone', 'ContactEmail']
+
+Failed notification email sent successfully
+
+Missing columns:    Datatype mismatch:  EffectiveStartDate, Found datatype: string, Expected datatype: date  Additional columns:
+Job has Failed because of incorrect schema. Failure email sent.
+
+Failed,mtfdm_dev2_dmbankdata_20260310_163703.parquet,0, 0,0,Missing columns:    Datatype mismatch:  EffectiveStartDate, Found datatype: string, Expected datatype: date  Additional columns:
+
+Job Metadata Updated!!
+
+Moved: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_163703.parquet to s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/archive/2026/03/mtfdm_dev2_dmbankdata_20260310_163703.parquet
+
+Moved Parquet file to archive.
+
+Running autoDebugger shutdown hook.

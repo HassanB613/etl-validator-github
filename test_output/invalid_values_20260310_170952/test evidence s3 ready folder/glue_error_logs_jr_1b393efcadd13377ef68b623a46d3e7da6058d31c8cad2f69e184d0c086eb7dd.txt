@@ -1,0 +1,1006 @@
+Glue Job Error Logs - Run ID: jr_1b393efcadd13377ef68b623a46d3e7da6058d31c8cad2f69e184d0c086eb7dd
+Job Name: load-bank-file-stg-dev2
+================================================================================
+
+Preparing ...
+
+Tue Mar 10 21:11:23 UTC 2026
+
+/etc/alternatives/jre/bin/java --add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED --add-exports=jdk.naming.dns/com.sun.jndi.dns=java.naming --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.math=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.util.concurrent=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.time=ALL-UNNAMED --add-opens=java.base/java.util.regex=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/sun.nio.cs=ALL-UNNAMED --add-opens=java.base/sun.util.calendar=ALL-UNNAMED --add-opens=java.base/sun.security.action=ALL-UNNAMED --add-opens=java.base/jdk.internal=ALL-UNNAMED --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED --add-opens=java.base/jdk.internal.reflect=ALL-UNNAMED --add-opens=java.base/jdk.internal.util=ALL-UNNAMED --add-opens=java.base/jdk.internal.util.random=ALL-UNNAMED --add-opens=java.sql/java.sql=ALL-UNNAMED --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED -XX:+IgnoreUnrecognizedVMOptions -Djavax.net.ssl.trustStore=/opt/amazon/certs/InternalAndExternalAndAWSTrustStore.jks -Djavax.net.ssl.trustStoreType=JKS -Djavax.net.ssl.trustStorePassword=amazon -DRDS_ROOT_CERT_PATH=/opt/amazon/certs/rds-combined-ca-bundle.pem -DREDSHIFT_ROOT_CERT_PATH=/opt/amazon/certs/redshift-ssl-ca-cert.pem -DRDS_TRUSTSTORE_URL=file:/opt/amazon/certs/InternalAndExternalAndAWSTrustStore.jks -Xmx10g -XX:+UseG1GC -XX:MaxHeapFreeRatio=70 -XX:InitiatingHeapOccupancyPercent=45 -cp /usr/share/aws/aws-glue-shuffle/*:/usr/share/aws/emr-glue-bootstrap/*:/usr/lib/spark/jars/*:/usr/lib/spark/conf:/usr/share/aws/aws-java-sdk-v2/*:/usr/share/aws/*:/usr/share/aws/hmclient/lib/aws-glue-datacatalog-spark-client.jar:/usr/share/aws/hmclient/lib/*:/usr/share/aws/iceberg/lib/*:/usr/share/aws/delta/lib/*:/usr/lib/hudi/*:/usr/share/aws/redshift/jdbc/*:/usr/share/aws/redshift/spark-redshift/lib/*:/usr/share/aws/glue-connectors/lib/*:/usr/share/aws/glue-pii-dependencies/lib/*:/usr/share/aws/datazone-openlineage-spark/lib/*:/usr/lib/hadoop/lib/*::/usr/lib/hadoop-lzo/lib/*:/usr/share/aws/aws-java-sdk/*:/usr/share/aws/emr/emrfs/conf:/usr/share/aws/emr/emrfs/lib/*:/usr/share/aws/emr/emrfs/auxlib/*:/usr/share/aws/emr/ddb/lib/emr-ddb-hadoop.jar:/usr/share/aws/emr/goodies/lib/emr-hadoop-goodies.jar:/usr/share/aws/emr/cloudwatch-sink/lib/*:/usr/share/aws/emr/security/conf:/usr/share/aws/emr/security/lib/*:/usr/lib/hadoop/*:/etc/hadoop/conf:/usr/share/java/Hive-JSON-Serde/* -Dlog4j2.configurationFile=/etc/spark/conf.dist/log4j2.properties -Dspark.authenticate=true -Dspark.authenticate.secret=3d112f6f97059d329d5169e88e672818fab78c7297eaf2ce8a5542ae0827ce21 com.amazonaws.services.glue.GlueBootstrap --conf spark.dynamicAllocation.enabled=true --conf spark.shuffle.service.enabled=true --conf spark.dynamicAllocation.minExecutors=1 --conf spark.dynamicAllocation.maxExecutors=-1 --conf spark.executor.memory=10g --conf spark.driver.memory=10g --conf spark.network.timeout=600 --driver-url spark://CoarseGrainedScheduler@10.157.136.29:43085 --executor-id 1 --app-id spark-application-1773177074011 --cores 4 --resourceProfileId 0
+
+openjdk version "17.0.18" 2026-01-20 LTS
+OpenJDK Runtime Environment Corretto-17.0.18.9.1 (build 17.0.18+9-LTS)
+
+OpenJDK 64-Bit Server VM Corretto-17.0.18.9.1 (build 17.0.18+9-LTS, mixed mode, sharing)
+
+26/03/10 21:11:25 INFO GlueBootstrap: Glue Bootstrapping...
+
+26/03/10 21:11:25 INFO GlueBootstrap: Glue Bootstrapping the executor...
+
+26/03/10 21:11:26 WARN VersionInfoUtils: The AWS SDK for Java 1.x entered maintenance mode starting July 31, 2024 and will reach end of support on December 31, 2025. For more information, see https://aws.amazon.com/blogs/developer/the-aws-sdk-for-java-1-x-is-in-maintenance-mode-effective-july-31-2024/
+You can print where on the file system the AWS SDK for Java 1.x core runtime is located by setting the AWS_JAVA_V1_PRINT_LOCATION environment variable or aws.java.v1.printLocation system property to 'true'.
+This message can be disabled by setting the AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT environment variable or aws.java.v1.disableDeprecationAnnouncement system property to 'true'.
+The AWS SDK for Java 1.x is being used here:
+at java.base/java.lang.Thread.getStackTrace(Thread.java:1619)
+at glue.shaded.com.amazonaws.util.VersionInfoUtils.printDeprecationAnnouncement(VersionInfoUtils.java:81)
+at glue.shaded.com.amazonaws.util.VersionInfoUtils.<clinit>(VersionInfoUtils.java:59)
+at glue.shaded.com.amazonaws.internal.EC2ResourceFetcher.<clinit>(EC2ResourceFetcher.java:44)
+at glue.shaded.com.amazonaws.auth.InstanceMetadataServiceCredentialsFetcher.<init>(InstanceMetadataServiceCredentialsFetcher.java:38)
+at glue.shaded.com.amazonaws.auth.InstanceProfileCredentialsProvider.<init>(InstanceProfileCredentialsProvider.java:111)
+at glue.shaded.com.amazonaws.auth.InstanceProfileCredentialsProvider.<init>(InstanceProfileCredentialsProvider.java:91)
+at glue.shaded.com.amazonaws.auth.InstanceProfileCredentialsProvider.<init>(InstanceProfileCredentialsProvider.java:75)
+at glue.shaded.com.amazonaws.auth.InstanceProfileCredentialsProvider.<clinit>(InstanceProfileCredentialsProvider.java:58)
+at glue.shaded.com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper.initializeProvider(EC2ContainerCredentialsProviderWrapper.java:66)
+at glue.shaded.com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper.<init>(EC2ContainerCredentialsProviderWrapper.java:55)
+at glue.shaded.com.amazonaws.auth.DefaultAWSCredentialsProviderChain.<init>(DefaultAWSCredentialsProviderChain.java:60)
+at glue.shaded.com.amazonaws.auth.DefaultAWSCredentialsProviderChain.<clinit>(DefaultAWSCredentialsProviderChain.java:54)
+at glue.shaded.com.amazonaws.services.s3.AmazonS3ClientBuilder.standard(AmazonS3ClientBuilder.java:46)
+at glue.shaded.com.amazonaws.services.s3.AmazonS3Client.builder(AmazonS3Client.java:740)
+at com.amazonaws.services.glue.GlueLibsDownloader$Builder.getS3Client(GlueLibsDownloader.java:291)
+at com.amazonaws.services.glue.GlueLibsDownloader$Builder.build(GlueLibsDownloader.java:283)
+at com.amazonaws.services.glue.GlueBootstrap.launchExecutorStage(GlueBootstrap.java:263)
+at com.amazonaws.services.glue.GlueBootstrap.bootstrap(GlueBootstrap.java:113)
+at com.amazonaws.services.glue.GlueBootstrap.main(GlueBootstrap.java:64)
+
+26/03/10 21:11:27 INFO AmazonHttpClient: Configuring Proxy. Proxy Host: 169.254.76.0 Proxy Port: 8888
+
+26/03/10 21:11:27 INFO CoarseGrainedExecutorBackend: Started daemon with process name: 34@10.157.136.84
+
+26/03/10 21:11:27 INFO SignalUtils: Registering signal handler for TERM
+
+26/03/10 21:11:27 INFO SignalUtils: Registering signal handler for HUP
+
+26/03/10 21:11:27 INFO SignalUtils: Registering signal handler for INT
+
+26/03/10 21:11:28 INFO SecurityManager: Changing view acls to: hadoop
+
+26/03/10 21:11:28 INFO SecurityManager: Changing modify acls to: hadoop
+
+26/03/10 21:11:28 INFO SecurityManager: Changing view acls groups to: 
+
+26/03/10 21:11:28 INFO SecurityManager: Changing modify acls groups to: 
+
+26/03/10 21:11:28 INFO SecurityManager: SecurityManager: authentication enabled; ui acls disabled; users with view permissions: hadoop; groups with view permissions: EMPTY; users with modify permissions: hadoop; groups with modify permissions: EMPTY
+
+26/03/10 21:11:29 INFO TransportClientFactory: Successfully created connection to /10.157.136.29:43085 after 186 ms (130 ms spent in bootstraps)
+
+26/03/10 21:11:29 INFO SecurityManager: Changing view acls to: hadoop
+
+26/03/10 21:11:29 INFO SecurityManager: Changing modify acls to: hadoop
+
+26/03/10 21:11:29 INFO SecurityManager: Changing view acls groups to: 
+
+26/03/10 21:11:29 INFO SecurityManager: Changing modify acls groups to: 
+
+26/03/10 21:11:29 INFO SecurityManager: SecurityManager: authentication enabled; ui acls disabled; users with view permissions: hadoop; groups with view permissions: EMPTY; users with modify permissions: hadoop; groups with modify permissions: EMPTY
+
+26/03/10 21:11:29 INFO TransportClientFactory: Successfully created connection to /10.157.136.29:43085 after 14 ms (11 ms spent in bootstraps)
+
+26/03/10 21:11:29 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-ec480d97-2bf0-40ce-9862-40dcecddc69c
+
+26/03/10 21:11:29 INFO MemoryStore: MemoryStore started with capacity 5.8 GiB
+
+26/03/10 21:11:29 INFO GlueCloudwatchSink: GlueCloudwatchSink: get cloudwatch client using proxy: host 169.254.76.0, port 8888
+
+26/03/10 21:11:30 INFO GlueCloudwatchSink: CloudwatchSink: jobName: load-bank-file-stg-dev2 jobRunId: jr_1b393efcadd13377ef68b623a46d3e7da6058d31c8cad2f69e184d0c086eb7dd
+
+26/03/10 21:11:30 INFO SubResultCacheManager: Sub-result caches are disabled.
+
+26/03/10 21:11:30 INFO EMRParamSideChannel: Setting FGAC mode to false
+
+26/03/10 21:11:30 INFO CoarseGrainedExecutorBackend: Connecting to driver: spark://CoarseGrainedScheduler@10.157.136.29:43085
+
+26/03/10 21:11:30 INFO ResourceUtils: ==============================================================
+
+26/03/10 21:11:30 INFO ResourceUtils: No custom resources configured for spark.executor.
+
+26/03/10 21:11:30 INFO ResourceUtils: ==============================================================
+
+26/03/10 21:11:30 INFO CoarseGrainedExecutorBackend: Successfully registered with driver
+
+26/03/10 21:11:30 INFO Executor: Starting executor ID 1 on host 10.157.136.84
+
+26/03/10 21:11:30 INFO Executor: OS info Linux, 5.10.248-247.988.amzn2.x86_64, amd64
+
+26/03/10 21:11:30 INFO Executor: Java version 17.0.18
+
+26/03/10 21:11:30 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 35181.
+
+26/03/10 21:11:30 INFO NettyBlockTransferService: Server created on 10.157.136.84:35181
+
+26/03/10 21:11:30 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+
+26/03/10 21:11:30 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(1, 10.157.136.84, 35181, None)
+
+26/03/10 21:11:30 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(1, 10.157.136.84, 35181, None)
+
+26/03/10 21:11:30 INFO BlockManager: Initialized BlockManager: BlockManagerId(1, 10.157.136.84, 35181, None)
+
+26/03/10 21:11:30 INFO Executor: Starting executor with user classpath (userClassPathFirst = false): ''
+
+26/03/10 21:11:30 INFO Executor: Created or updated repl class loader org.apache.spark.util.MutableURLClassLoader@7dbe8ad4 for default.
+
+26/03/10 21:11:30 INFO Executor: Fetching spark://10.157.136.29:43085/files/glue-job-7332023382906297262_glue_venv.zip#python_environment with timestamp 1773177071599
+
+26/03/10 21:11:31 INFO TransportClientFactory: Successfully created connection to /10.157.136.29:43085 after 65 ms (63 ms spent in bootstraps)
+
+26/03/10 21:11:31 INFO Utils: Fetching spark://10.157.136.29:43085/files/glue-job-7332023382906297262_glue_venv.zip to /tmp/spark-a775dddc-af46-41c6-8136-cc464af251cd/fetchFileTemp6873691370624612093.tmp
+
+26/03/10 21:11:31 INFO Executor: Unpacking an archive spark://10.157.136.29:43085/files/glue-job-7332023382906297262_glue_venv.zip#python_environment from /tmp/spark-a775dddc-af46-41c6-8136-cc464af251cd/glue-job-7332023382906297262_glue_venv.zip to /tmp/./python_environment
+
+26/03/10 21:11:31 INFO MetricsConfig: Loaded properties from hadoop-metrics2.properties
+
+26/03/10 21:11:31 INFO MetricsSystemImpl: Scheduled Metric snapshot period at 10 second(s).
+
+26/03/10 21:11:31 INFO MetricsSystemImpl: s3a-file-system metrics system started
+
+26/03/10 21:11:31 INFO Executor: Fetching spark://10.157.136.29:43085/jars/u3ZXGu-aws-glue-di-package-5.0.950.jar with timestamp 1773177071599
+
+26/03/10 21:11:31 INFO Utils: Fetching spark://10.157.136.29:43085/jars/u3ZXGu-aws-glue-di-package-5.0.950.jar to /tmp/./fetchFileTemp10952958572897691518.tmp
+
+26/03/10 21:11:31 INFO PlatformInfo: Unable to read clusterId from http://localhost:8321/configuration, trying extra instance data file: /var/lib/instance-controller/extraInstanceData.json
+
+26/03/10 21:11:31 INFO PlatformInfo: Unable to read clusterId from /var/lib/instance-controller/extraInstanceData.json, trying EMR job-flow data file: /var/lib/info/job-flow.json
+
+26/03/10 21:11:31 INFO PlatformInfo: Unable to read clusterId from /var/lib/info/job-flow.json, out of places to look
+
+26/03/10 21:11:31 INFO Executor: Adding file:/tmp/./u3ZXGu-aws-glue-di-package-5.0.950.jar to class loader default
+
+26/03/10 21:11:31 INFO Executor: Fetching spark://10.157.136.29:43085/jars/awfyjZ-AwsGlueMLLibs.jar with timestamp 1773177071599
+
+26/03/10 21:11:31 INFO Utils: Fetching spark://10.157.136.29:43085/jars/awfyjZ-AwsGlueMLLibs.jar to /tmp/./fetchFileTemp9794148934520117881.tmp
+
+26/03/10 21:11:32 INFO Executor: Adding file:/tmp/./awfyjZ-AwsGlueMLLibs.jar to class loader default
+
+26/03/10 21:11:32 INFO CoarseGrainedExecutorBackend: eagerFSInit: Eagerly initialized FileSystem at s3a://does/not/exist in 1533 ms
+
+26/03/10 21:11:32 WARN VersionInfoUtils: The AWS SDK for Java 1.x entered maintenance mode starting July 31, 2024 and will reach end of support on December 31, 2025. For more information, see https://aws.amazon.com/blogs/developer/the-aws-sdk-for-java-1-x-is-in-maintenance-mode-effective-july-31-2024/
+You can print where on the file system the AWS SDK for Java 1.x core runtime is located by setting the AWS_JAVA_V1_PRINT_LOCATION environment variable or aws.java.v1.printLocation system property to 'true'.
+This message can be disabled by setting the AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT environment variable or aws.java.v1.disableDeprecationAnnouncement system property to 'true'.
+The AWS SDK for Java 1.x is being used here:
+at java.base/java.lang.Thread.getStackTrace(Thread.java:1619)
+at com.amazonaws.util.VersionInfoUtils.printDeprecationAnnouncement(VersionInfoUtils.java:81)
+at com.amazonaws.util.VersionInfoUtils.<clinit>(VersionInfoUtils.java:59)
+at com.amazonaws.internal.EC2ResourceFetcher.<clinit>(EC2ResourceFetcher.java:44)
+at com.amazonaws.auth.InstanceMetadataServiceCredentialsFetcher.<init>(InstanceMetadataServiceCredentialsFetcher.java:38)
+at com.amazonaws.auth.InstanceProfileCredentialsProvider.<init>(InstanceProfileCredentialsProvider.java:111)
+at com.amazonaws.auth.InstanceProfileCredentialsProvider.<init>(InstanceProfileCredentialsProvider.java:91)
+at com.amazonaws.auth.InstanceProfileCredentialsProvider.<init>(InstanceProfileCredentialsProvider.java:75)
+at com.amazonaws.auth.InstanceProfileCredentialsProvider.<clinit>(InstanceProfileCredentialsProvider.java:58)
+at com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper.initializeProvider(EC2ContainerCredentialsProviderWrapper.java:66)
+at com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper.<init>(EC2ContainerCredentialsProviderWrapper.java:55)
+at com.amazonaws.auth.DefaultAWSCredentialsProviderChain.<init>(DefaultAWSCredentialsProviderChain.java:60)
+at com.amazonaws.auth.DefaultAWSCredentialsProviderChain.<clinit>(DefaultAWSCredentialsProviderChain.java:54)
+at java.base/java.lang.Class.forName0(Native Method)
+at java.base/java.lang.Class.forName(Class.java:469)
+at com.amazon.ws.emr.hadoop.********.DefaultAWSCredentialsProviderFactory.getCustomAwsCredentialsProvider(DefaultAWSCredentialsProviderFactory.java:68)
+at com.amazon.ws.emr.hadoop.********.DefaultAWSCredentialsProviderFactory.getAwsCredentialsProviderChain(DefaultAWSCredentialsProviderFactory.java:33)
+at com.amazon.ws.emr.hadoop.********.DefaultAWSCredentialsProviderFactory.getAwsCredentialsProvider(DefaultAWSCredentialsProviderFactory.java:27)
+at com.amazon.ws.emr.hadoop.********.EmrFSProdModule.getAwsCredentialsProvider(EmrFSProdModule.java:81)
+at com.amazon.ws.emr.hadoop.********.EmrFSProdModule.createAmazonS3LiteClient(EmrFSProdModule.java:93)
+at com.amazon.ws.emr.hadoop.********.EmrFSProdModule.createAmazonS3Lite(EmrFSProdModule.java:266)
+at com.amazon.ws.emr.hadoop.********.EmrFSBaseModule.provideAmazonS3Lite(EmrFSBaseModule.java:112)
+at com.amazon.ws.emr.hadoop.********.EmrFSBaseModule$$FastClassByGuice$$1234600.GUICE$TRAMPOLINE(<generated>)
+at com.amazon.ws.emr.hadoop.********.EmrFSBaseModule$$FastClassByGuice$$1234600.apply(<generated>)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.ProviderMethod$FastClassProviderMethod.doProvision(ProviderMethod.java:260)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.ProviderMethod.doProvision(ProviderMethod.java:171)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.InternalProviderInstanceBindingImpl$CyclicFactory.provision(InternalProviderInstanceBindingImpl.java:185)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.InternalProviderInstanceBindingImpl$CyclicFactory.get(InternalProviderInstanceBindingImpl.java:162)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.ProviderToInternalFactoryAdapter.get(ProviderToInternalFactoryAdapter.java:40)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.SingletonScope$1.get(SingletonScope.java:169)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.InternalFactoryToProviderAdapter.get(InternalFactoryToProviderAdapter.java:45)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.SingleParameterInjector.inject(SingleParameterInjector.java:40)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.SingleParameterInjector.getAll(SingleParameterInjector.java:60)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.ProviderMethod.doProvision(ProviderMethod.java:171)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.InternalProviderInstanceBindingImpl$CyclicFactory.provision(InternalProviderInstanceBindingImpl.java:185)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.InternalProviderInstanceBindingImpl$CyclicFactory.get(InternalProviderInstanceBindingImpl.java:162)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.ProviderToInternalFactoryAdapter.get(ProviderToInternalFactoryAdapter.java:40)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.SingletonScope$1.get(SingletonScope.java:169)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.InternalFactoryToProviderAdapter.get(InternalFactoryToProviderAdapter.java:45)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.SingleFieldInjector.inject(SingleFieldInjector.java:50)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.MembersInjectorImpl.injectMembers(MembersInjectorImpl.java:146)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.ConstructorInjector.provision(ConstructorInjector.java:124)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.ConstructorInjector.construct(ConstructorInjector.java:91)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.ConstructorBindingImpl$Factory.get(ConstructorBindingImpl.java:300)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.FactoryProxy.get(FactoryProxy.java:60)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.InjectorImpl$1.get(InjectorImpl.java:1101)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.InjectorImpl.getInstance(InjectorImpl.java:1134)
+at com.amazon.ws.emr.hadoop.fs.EmrFileSystem.initialize(EmrFileSystem.java:95)
+at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3670)
+at org.apache.hadoop.fs.FileSystem.access$300(FileSystem.java:171)
+at org.apache.hadoop.fs.FileSystem$Cache.getInternal(FileSystem.java:3771)
+at org.apache.hadoop.fs.FileSystem$Cache.get(FileSystem.java:3722)
+at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:564)
+at org.apache.hadoop.fs.Path.getFileSystem(Path.java:374)
+at org.apache.spark.executor.CoarseGrainedExecutorBackend.$anonfun$eagerFSInit$1(CoarseGrainedExecutorBackend.scala:359)
+at scala.collection.parallel.mutable.ParArray$ParArrayIterator.flatmap2combiner(ParArray.scala:419)
+at scala.collection.parallel.ParIterableLike$FlatMap.leaf(ParIterableLike.scala:1082)
+at scala.collection.parallel.Task.$anonfun$tryLeaf$1(Tasks.scala:53)
+at scala.runtime.java8.JFunction0$mcV$sp.apply(JFunction0$mcV$sp.java:23)
+at scala.util.control.Breaks$$anon$1.catchBreak(Breaks.scala:67)
+at scala.collection.parallel.Task.tryLeaf(Tasks.scala:56)
+at scala.collection.parallel.Task.tryLeaf$(Tasks.scala:50)
+at scala.collection.parallel.ParIterableLike$FlatMap.tryLeaf(ParIterableLike.scala:1078)
+at scala.collection.parallel.FutureTasks.$anonfun$exec$5(Tasks.scala:499)
+at scala.concurrent.Future$.$anonfun$apply$1(Future.scala:659)
+at scala.util.Success.$anonfun$map$1(Try.scala:255)
+at scala.util.Success.map(Try.scala:213)
+at scala.concurrent.Future.$anonfun$map$1(Future.scala:292)
+at scala.concurrent.impl.Promise.liftedTree1$1(Promise.scala:33)
+at scala.concurrent.impl.Promise.$anonfun$transform$1(Promise.scala:33)
+at scala.concurrent.impl.CallbackRunnable.run(Promise.scala:64)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+
+26/03/10 21:11:32 INFO ClientConfigurationFactory: Set initial getObject socket timeout to 2000 ms.
+
+26/03/10 21:11:33 INFO CoarseGrainedExecutorBackend: eagerFSInit: Eagerly initialized FileSystem at s3://does/not/exist in 2331 ms
+
+26/03/10 21:11:37 INFO CoarseGrainedExecutorBackend: Got assigned task 0
+
+26/03/10 21:11:37 INFO Executor: Running task 0.0 in stage 0.0 (TID 0)
+
+26/03/10 21:11:37 INFO TorrentBroadcast: Started reading broadcast variable 0 with 1 pieces (estimated total size 4.0 MiB)
+
+26/03/10 21:11:37 INFO TransportClientFactory: Successfully created connection to /10.157.136.29:45303 after 11 ms (9 ms spent in bootstraps)
+
+26/03/10 21:11:37 INFO MemoryStore: Block broadcast_0_piece0 stored as bytes in memory (estimated size 8.2 KiB, actual size: 8.2 KiB, free 5.8 GiB)
+
+26/03/10 21:11:37 INFO TorrentBroadcast: Reading broadcast variable 0 took 130 ms
+
+26/03/10 21:11:37 INFO MemoryStore: Block broadcast_0 stored as values in memory (estimated size 16.1 KiB, free 5.8 GiB)
+
+26/03/10 21:11:39 INFO CodeGenerator: Code generated in 209.289675 ms
+
+26/03/10 21:11:39 INFO JDBCRDD: closed connection
+
+26/03/10 21:11:39 INFO Executor: Finished task 0.0 in stage 0.0 (TID 0). 2396 bytes result sent to driver
+
+26/03/10 21:11:39 INFO CoarseGrainedExecutorBackend: Got assigned task 1
+
+26/03/10 21:11:39 INFO Executor: Running task 0.0 in stage 2.0 (TID 1)
+
+26/03/10 21:11:39 INFO MapOutputTrackerWorker: Updating epoch to 1 and clearing cache
+
+26/03/10 21:11:39 INFO TorrentBroadcast: Started reading broadcast variable 1 with 1 pieces (estimated total size 4.0 MiB)
+
+26/03/10 21:11:39 INFO MemoryStore: Block broadcast_1_piece0 stored as bytes in memory (estimated size 6.7 KiB, actual size: 6.7 KiB, free 5.8 GiB)
+
+26/03/10 21:11:39 INFO TorrentBroadcast: Reading broadcast variable 1 took 9 ms
+
+26/03/10 21:11:39 INFO MemoryStore: Block broadcast_1 stored as values in memory (estimated size 14.1 KiB, free 5.8 GiB)
+
+26/03/10 21:11:40 INFO MapOutputTrackerWorker: Don't have map outputs for shuffle 0, fetching them
+
+26/03/10 21:11:40 INFO MapOutputTrackerWorker: Doing the fetch; tracker endpoint = NettyRpcEndpointRef(spark://MapOutputTracker@10.157.136.29:43085)
+
+26/03/10 21:11:40 INFO MapOutputTrackerWorker: Got the map output locations
+
+26/03/10 21:11:40 INFO ShuffleBlockFetcherIterator: Getting 1 (54.0 B) non-empty blocks including 1 (54.0 B) local and 0 (0.0 B) host-local and 0 (0.0 B) push-merged-local and 0 (0.0 B) remote blocks
+
+26/03/10 21:11:40 INFO ShuffleBlockFetcherIterator: Started 0 remote fetches in 12 ms
+
+26/03/10 21:11:40 INFO CodeGenerator: Code generated in 12.802308 ms
+
+26/03/10 21:11:40 INFO Executor: Finished task 0.0 in stage 2.0 (TID 1). 4501 bytes result sent to driver
+
+26/03/10 21:11:41 INFO CoarseGrainedExecutorBackend: Got assigned task 2
+
+26/03/10 21:11:41 INFO Executor: Running task 0.0 in stage 3.0 (TID 2)
+
+26/03/10 21:11:41 INFO TorrentBroadcast: Started reading broadcast variable 2 with 1 pieces (estimated total size 4.0 MiB)
+
+26/03/10 21:11:41 INFO MemoryStore: Block broadcast_2_piece0 stored as bytes in memory (estimated size 61.3 KiB, actual size: 61.3 KiB, free 5.8 GiB)
+
+26/03/10 21:11:41 INFO TorrentBroadcast: Reading broadcast variable 2 took 9 ms
+
+26/03/10 21:11:41 INFO MemoryStore: Block broadcast_2 stored as values in memory (estimated size 167.7 KiB, free 5.8 GiB)
+
+26/03/10 21:11:41 INFO ClientConfigurationFactory: Set initial getObject socket timeout to 2000 ms.
+
+26/03/10 21:11:42 INFO S3NativeFileSystem: Opening 's3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_170952.parquet' for reading
+
+26/03/10 21:11:42 INFO Executor: Finished task 0.0 in stage 3.0 (TID 2). 2747 bytes result sent to driver
+
+26/03/10 21:11:42 INFO CoarseGrainedExecutorBackend: Got assigned task 3
+
+26/03/10 21:11:42 INFO Executor: Running task 0.0 in stage 4.0 (TID 3)
+
+26/03/10 21:11:42 INFO TorrentBroadcast: Started reading broadcast variable 3 with 1 pieces (estimated total size 4.0 MiB)
+
+26/03/10 21:11:43 INFO MemoryStore: Block broadcast_3_piece0 stored as bytes in memory (estimated size 61.3 KiB, actual size: 61.3 KiB, free 5.8 GiB)
+
+26/03/10 21:11:43 INFO TorrentBroadcast: Reading broadcast variable 3 took 12 ms
+
+26/03/10 21:11:43 INFO MemoryStore: Block broadcast_3 stored as values in memory (estimated size 167.7 KiB, free 5.8 GiB)
+
+26/03/10 21:11:43 INFO S3NativeFileSystem: Opening 's3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_170952.parquet' for reading
+
+26/03/10 21:11:43 INFO Executor: Finished task 0.0 in stage 4.0 (TID 3). 2661 bytes result sent to driver
+
+26/03/10 21:11:45 INFO CoarseGrainedExecutorBackend: Got assigned task 4
+
+26/03/10 21:11:45 INFO Executor: Running task 0.0 in stage 5.0 (TID 4)
+
+26/03/10 21:11:45 INFO TorrentBroadcast: Started reading broadcast variable 6 with 1 pieces (estimated total size 4.0 MiB)
+
+26/03/10 21:11:45 INFO MemoryStore: Block broadcast_6_piece0 stored as bytes in memory (estimated size 11.4 KiB, actual size: 11.4 KiB, free 5.8 GiB)
+
+26/03/10 21:11:45 INFO TorrentBroadcast: Reading broadcast variable 6 took 8 ms
+
+26/03/10 21:11:45 INFO MemoryStore: Block broadcast_6 stored as values in memory (estimated size 27.2 KiB, free 5.8 GiB)
+
+26/03/10 21:11:45 INFO AsyncFileDownloader: TID: 4 - Number of files to download: 1, unique file paths: 1
+
+26/03/10 21:11:45 INFO TorrentBroadcast: Started reading broadcast variable 4 with 1 pieces (estimated total size 4.0 MiB)
+
+26/03/10 21:11:45 INFO MemoryStore: Block broadcast_4_piece0 stored as bytes in memory (estimated size 59.3 KiB, actual size: 59.3 KiB, free 5.8 GiB)
+
+26/03/10 21:11:45 INFO TorrentBroadcast: Reading broadcast variable 4 took 22 ms
+
+26/03/10 21:11:45 INFO CodeGenerator: Code generated in 47.294949 ms
+
+26/03/10 21:11:45 INFO MemoryStore: Block broadcast_4 stored as values in memory (estimated size 476.5 KiB, free 5.8 GiB)
+
+26/03/10 21:11:45 INFO ParquetFooterCache: Footer Cache Max Memory Usage Setting to: 156342681, available: 6253707264, memoryFactor: 0.025, Acquired Memory: 0
+
+26/03/10 21:11:45 INFO S3NativeFileSystem: Opening 's3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_170952.parquet' for reading
+
+26/03/10 21:11:45 INFO ParquetFileFormat: TID - 4, all current weight: 0 used, Increase the acquire 0 to 15634268
+
+26/03/10 21:11:45 INFO S3NativeFileSystem: Opening 's3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_170952.parquet' for reading
+
+26/03/10 21:11:46 INFO S3NativeFileSystem: Opening 's3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_170952.parquet' for reading
+
+26/03/10 21:11:46 INFO FileScanRDD: TID: 4 - Got next file: path: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_170952.parquet, range: 0-19149, partition values: [empty row], isDataPresent: true, eTag: 35ce2660bb9be697329f477dae91ef38. Elapsed time: 270689 micros
+
+26/03/10 21:11:46 INFO FileScanRDD: TID: 4 - Reading current file: path: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_170952.parquet, range: 0-19149, partition values: [empty row], isDataPresent: true, eTag: 35ce2660bb9be697329f477dae91ef38
+
+26/03/10 21:11:46 INFO Executor: Finished task 0.0 in stage 5.0 (TID 4). 3139 bytes result sent to driver
+
+26/03/10 21:11:46 INFO CoarseGrainedExecutorBackend: Got assigned task 5
+
+26/03/10 21:11:46 INFO Executor: Running task 0.0 in stage 7.0 (TID 5)
+
+26/03/10 21:11:46 INFO MapOutputTrackerWorker: Updating epoch to 2 and clearing cache
+
+26/03/10 21:11:46 INFO TorrentBroadcast: Started reading broadcast variable 7 with 1 pieces (estimated total size 4.0 MiB)
+
+26/03/10 21:11:46 INFO MemoryStore: Block broadcast_7_piece0 stored as bytes in memory (estimated size 6.7 KiB, actual size: 6.7 KiB, free 5.8 GiB)
+
+26/03/10 21:11:46 INFO TorrentBroadcast: Reading broadcast variable 7 took 8 ms
+
+26/03/10 21:11:46 INFO MemoryStore: Block broadcast_7 stored as values in memory (estimated size 14.1 KiB, free 5.8 GiB)
+
+26/03/10 21:11:46 INFO MapOutputTrackerWorker: Don't have map outputs for shuffle 1, fetching them
+
+26/03/10 21:11:46 INFO MapOutputTrackerWorker: Doing the fetch; tracker endpoint = NettyRpcEndpointRef(spark://MapOutputTracker@10.157.136.29:43085)
+
+26/03/10 21:11:46 INFO MapOutputTrackerWorker: Got the map output locations
+
+26/03/10 21:11:46 INFO ShuffleBlockFetcherIterator: Getting 1 (54.0 B) non-empty blocks including 1 (54.0 B) local and 0 (0.0 B) host-local and 0 (0.0 B) push-merged-local and 0 (0.0 B) remote blocks
+
+26/03/10 21:11:46 INFO ShuffleBlockFetcherIterator: Started 0 remote fetches in 1 ms
+
+26/03/10 21:11:46 INFO Executor: Finished task 0.0 in stage 7.0 (TID 5). 4465 bytes result sent to driver
+
+26/03/10 21:11:49 INFO CoarseGrainedExecutorBackend: Got assigned task 6
+
+26/03/10 21:11:49 INFO Executor: Running task 0.0 in stage 8.0 (TID 6)
+
+26/03/10 21:11:49 INFO TorrentBroadcast: Started reading broadcast variable 10 with 1 pieces (estimated total size 4.0 MiB)
+
+26/03/10 21:11:49 INFO MemoryStore: Block broadcast_10_piece0 stored as bytes in memory (estimated size 26.3 KiB, actual size: 26.3 KiB, free 5.8 GiB)
+
+26/03/10 21:11:49 INFO TorrentBroadcast: Reading broadcast variable 10 took 12 ms
+
+26/03/10 21:11:49 INFO MemoryStore: Block broadcast_10 stored as values in memory (estimated size 87.0 KiB, free 5.8 GiB)
+
+26/03/10 21:11:49 INFO AsyncFileDownloader: TID: 6 - Number of files to download: 1, unique file paths: 1
+
+26/03/10 21:11:49 INFO TorrentBroadcast: Started reading broadcast variable 8 with 1 pieces (estimated total size 4.0 MiB)
+
+26/03/10 21:11:49 INFO MemoryStore: Block broadcast_8_piece0 stored as bytes in memory (estimated size 60.1 KiB, actual size: 60.1 KiB, free 5.8 GiB)
+
+26/03/10 21:11:49 INFO TorrentBroadcast: Reading broadcast variable 8 took 9 ms
+
+26/03/10 21:11:49 INFO MemoryStore: Block broadcast_8 stored as values in memory (estimated size 476.5 KiB, free 5.8 GiB)
+
+26/03/10 21:11:49 INFO S3NativeFileSystem: Opening 's3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_170952.parquet' for reading
+
+26/03/10 21:11:49 INFO S3NativeFileSystem: Opening 's3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_170952.parquet' for reading
+
+26/03/10 21:11:49 INFO AsyncFileDownloader: TID: 6 - Downloading ParquetFileChunkGroup(path=s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_170952.parquet, ordinal=0), downloadSize=4.1 KiB, numChunks=1, parallelizedChunks=false
+
+26/03/10 21:11:49 INFO S3NativeFileSystem: Opening 's3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_170952.parquet' for reading
+
+26/03/10 21:11:49 INFO CodeGenerator: Code generated in 254.586745 ms
+
+26/03/10 21:11:49 INFO CodecPool: Got brand-new decompressor [.snappy]
+
+26/03/10 21:11:49 INFO AsyncFileDownloader: TID: 6 - Downloaded ParquetFileChunkGroup(path=s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_170952.parquet, ordinal=0), elapsedTime=135987 micros
+
+26/03/10 21:11:49 INFO FileScanRDD: TID: 6 - Got next file: path: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_170952.parquet, range: 0-19149, partition values: [empty row], isDataPresent: true, eTag: 35ce2660bb9be697329f477dae91ef38. Elapsed time: 9783 micros
+
+26/03/10 21:11:49 INFO FileScanRDD: TID: 6 - Reading current file: path: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_170952.parquet, range: 0-19149, partition values: [empty row], isDataPresent: true, eTag: 35ce2660bb9be697329f477dae91ef38
+
+26/03/10 21:11:49 INFO MemoryStore: Block rdd_21_0 stored as values in memory (estimated size 9.1 KiB, free 5.8 GiB)
+
+26/03/10 21:11:49 INFO Executor: 1 block locks were not released by task 0.0 in stage 8.0 (TID 6)
+[rdd_21_0]
+
+26/03/10 21:11:49 INFO Executor: Finished task 0.0 in stage 8.0 (TID 6). 2312 bytes result sent to driver
+
+26/03/10 21:11:50 INFO CoarseGrainedExecutorBackend: Got assigned task 7
+
+26/03/10 21:11:50 INFO Executor: Running task 0.0 in stage 9.0 (TID 7)
+
+26/03/10 21:11:50 INFO TorrentBroadcast: Started reading broadcast variable 11 with 1 pieces (estimated total size 4.0 MiB)
+
+26/03/10 21:11:50 INFO MemoryStore: Block broadcast_11_piece0 stored as bytes in memory (estimated size 92.1 KiB, actual size: 92.1 KiB, free 5.8 GiB)
+
+26/03/10 21:11:50 INFO TorrentBroadcast: Reading broadcast variable 11 took 10 ms
+
+26/03/10 21:11:50 INFO MemoryStore: Block broadcast_11 stored as values in memory (estimated size 321.4 KiB, free 5.8 GiB)
+
+26/03/10 21:11:51 INFO BlockManager: Found block rdd_21_0 locally
+
+26/03/10 21:11:51 INFO CodeGenerator: Code generated in 7.245458 ms
+
+26/03/10 21:11:51 INFO CodeGenerator: Code generated in 41.002855 ms
+
+26/03/10 21:11:51 INFO CodeGenerator: Generated method too long to be JIT compiled: org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIteratorForCodegenStage1.hashAgg_doAggregateWithoutKey_0$ is 29190 bytes
+
+26/03/10 21:11:51 INFO CodeGenerator: Code generated in 415.358942 ms
+
+26/03/10 21:11:51 INFO Executor: Finished task 0.0 in stage 9.0 (TID 7). 3595 bytes result sent to driver
+
+26/03/10 21:11:51 INFO CoarseGrainedExecutorBackend: Got assigned task 8
+
+26/03/10 21:11:51 INFO Executor: Running task 0.0 in stage 11.0 (TID 8)
+
+26/03/10 21:11:51 INFO MapOutputTrackerWorker: Updating epoch to 3 and clearing cache
+
+26/03/10 21:11:51 INFO TorrentBroadcast: Started reading broadcast variable 12 with 1 pieces (estimated total size 4.0 MiB)
+
+26/03/10 21:11:51 INFO MemoryStore: Block broadcast_12_piece0 stored as bytes in memory (estimated size 6.7 KiB, actual size: 6.7 KiB, free 5.8 GiB)
+
+26/03/10 21:11:51 INFO TorrentBroadcast: Reading broadcast variable 12 took 7 ms
+
+26/03/10 21:11:51 INFO MemoryStore: Block broadcast_12 stored as values in memory (estimated size 14.1 KiB, free 5.8 GiB)
+
+26/03/10 21:11:51 INFO MapOutputTrackerWorker: Don't have map outputs for shuffle 2, fetching them
+
+26/03/10 21:11:51 INFO MapOutputTrackerWorker: Doing the fetch; tracker endpoint = NettyRpcEndpointRef(spark://MapOutputTracker@10.157.136.29:43085)
+
+26/03/10 21:11:51 INFO MapOutputTrackerWorker: Got the map output locations
+
+26/03/10 21:11:51 INFO ShuffleBlockFetcherIterator: Getting 1 (54.0 B) non-empty blocks including 1 (54.0 B) local and 0 (0.0 B) host-local and 0 (0.0 B) push-merged-local and 0 (0.0 B) remote blocks
+
+26/03/10 21:11:51 INFO ShuffleBlockFetcherIterator: Started 0 remote fetches in 1 ms
+
+26/03/10 21:11:51 INFO Executor: Finished task 0.0 in stage 11.0 (TID 8). 4465 bytes result sent to driver
+
+26/03/10 21:11:52 INFO CoarseGrainedExecutorBackend: Got assigned task 9
+
+26/03/10 21:11:52 INFO Executor: Running task 0.0 in stage 12.0 (TID 9)
+
+26/03/10 21:11:52 INFO TorrentBroadcast: Started reading broadcast variable 13 with 1 pieces (estimated total size 4.0 MiB)
+
+26/03/10 21:11:52 INFO MemoryStore: Block broadcast_13_piece0 stored as bytes in memory (estimated size 93.3 KiB, actual size: 93.3 KiB, free 5.8 GiB)
+
+26/03/10 21:11:52 INFO TorrentBroadcast: Reading broadcast variable 13 took 10 ms
+
+26/03/10 21:11:52 INFO MemoryStore: Block broadcast_13 stored as values in memory (estimated size 327.7 KiB, free 5.8 GiB)
+
+26/03/10 21:11:52 INFO BlockManager: Found block rdd_21_0 locally
+
+26/03/10 21:11:52 INFO CodeGenerator: Generated method too long to be JIT compiled: org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIteratorForCodegenStage1.hashAgg_doAggregateWithoutKey_0$ is 29211 bytes
+
+26/03/10 21:11:52 INFO CodeGenerator: Code generated in 369.817579 ms
+
+26/03/10 21:11:53 INFO Executor: Finished task 0.0 in stage 12.0 (TID 9). 3595 bytes result sent to driver
+
+26/03/10 21:11:53 INFO CoarseGrainedExecutorBackend: Got assigned task 10
+
+Preparing ...
+
+Tue Mar 10 21:10:21 UTC 2026
+
+/etc/alternatives/jre/bin/java --add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED --add-exports=jdk.naming.dns/com.sun.jndi.dns=java.naming --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.math=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.util.concurrent=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.time=ALL-UNNAMED --add-opens=java.base/java.util.regex=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/sun.nio.cs=ALL-UNNAMED --add-opens=java.base/sun.util.calendar=ALL-UNNAMED --add-opens=java.base/sun.security.action=ALL-UNNAMED --add-opens=java.base/jdk.internal=ALL-UNNAMED --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED --add-opens=java.base/jdk.internal.reflect=ALL-UNNAMED --add-opens=java.base/jdk.internal.util=ALL-UNNAMED --add-opens=java.base/jdk.internal.util.random=ALL-UNNAMED --add-opens=java.sql/java.sql=ALL-UNNAMED --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED -XX:+IgnoreUnrecognizedVMOptions -Djavax.net.ssl.trustStore=/opt/amazon/certs/InternalAndExternalAndAWSTrustStore.jks -Djavax.net.ssl.trustStoreType=JKS -Djavax.net.ssl.trustStorePassword=amazon -DRDS_ROOT_CERT_PATH=/opt/amazon/certs/rds-combined-ca-bundle.pem -DREDSHIFT_ROOT_CERT_PATH=/opt/amazon/certs/redshift-ssl-ca-cert.pem -DRDS_TRUSTSTORE_URL=file:/opt/amazon/certs/InternalAndExternalAndAWSTrustStore.jks -cp /usr/share/aws/aws-glue-shuffle/*:/usr/share/aws/emr-glue-bootstrap/*:/usr/lib/spark/jars/*:/usr/lib/spark/conf:/usr/share/aws/aws-java-sdk-v2/*:/usr/share/aws/*:/usr/share/aws/hmclient/lib/aws-glue-datacatalog-spark-client.jar:/usr/share/aws/hmclient/lib/*:/usr/share/aws/iceberg/lib/*:/usr/share/aws/delta/lib/*:/usr/lib/hudi/*:/usr/share/aws/redshift/jdbc/*:/usr/share/aws/redshift/spark-redshift/lib/*:/usr/share/aws/glue-connectors/lib/*:/usr/share/aws/glue-pii-dependencies/lib/*:/usr/share/aws/datazone-openlineage-spark/lib/*:/usr/lib/hadoop/lib/*::/usr/lib/hadoop-lzo/lib/*:/usr/share/aws/aws-java-sdk/*:/usr/share/aws/emr/emrfs/conf:/usr/share/aws/emr/emrfs/lib/*:/usr/share/aws/emr/emrfs/auxlib/*:/usr/share/aws/emr/ddb/lib/emr-ddb-hadoop.jar:/usr/share/aws/emr/goodies/lib/emr-hadoop-goodies.jar:/usr/share/aws/emr/cloudwatch-sink/lib/*:/usr/share/aws/emr/security/conf:/usr/share/aws/emr/security/lib/*:/usr/lib/hadoop/*:/etc/hadoop/conf:/usr/share/java/Hive-JSON-Serde/* -Dlog4j2.configurationFile=/etc/spark/conf.dist/log4j2.properties com.amazonaws.services.glue.GlueBootstrap --conf spark.dynamicAllocation.enabled=true --conf spark.shuffle.service.enabled=true --conf spark.dynamicAllocation.minExecutors=1 --conf spark.dynamicAllocation.maxExecutors=1 --conf spark.executor.memory=10g --conf spark.driver.memory=10g --conf spark.network.timeout=600 --PREFIX bankfile/ready/  --USER load-bank-file-stg --REC_EMAIL DL-MTF_PM_IT_Ops@elevancehealth.com,achamyeleh.ewunetu@elevancehealth.com,***********@elevancehealth.com --TGT_PREFIX bankfile/error/ --internal-lib-urls https://prod-us-east-1-package-distribution-artifacts-bucket.s3.amazonaws.com/007/Glue5.0/aws-glue-dataplane-python/java17/5.0.950/njFdJ6-AWSGlueDataplanePython-5.0.950.py.zip?[REDACTED],https://prod-us-east-1-package-distribution-artifacts-bucket.s3.amazonaws.com/007/Glue5.0/aws-glue-di-libs/java17/5.0.950/u3ZXGu-aws-glue-di-package-5.0.950.jar?[REDACTED],https://prod-us-east-1-package-distribution-artifacts-bucket.s3.amazonaws.com/007/Glue5.0/AwsGlueMLLibsPython/java17/5.0.463/0zp0Wh-AwsGlueMLLibs.py.zip?[REDACTED],https://prod-us-east-1-package-distribution-artifacts-bucket.s3.amazonaws.com/007/Glue5.0/AwsGlueMLLibs/java17/5.0.463/awfyjZ-AwsGlueMLLibs.jar?[REDACTED] --RDS RDS2connection  --JOB_ID j_377b3f550ccec06bf7fb8524f26582613d4b75a2976c9ce4ede2fd140da1e989 --spark-event-logs-path s3://aws-glue-assets-448049811908-us-east-1/sparkHistoryLogs/  --enable-observability-metrics true  --SEND_EMAIL noreply-mtf-pm@cms.hhs.gov --TEMP_PREFIX bankfile/tempfolder/ --JOB_NAME load-bank-file-stg-dev2 --ENV dev2  --connection-names RDSconnection  --enable-glue-datacatalog true --glue-di-packages-correlation-ids 20260305-163334_,20260305-163334_,6416010234,6416010234 --job-bookmark-option job-bookmark-disable --TempDir s3://aws-glue-assets-448049811908-us-east-1/temporary/ --BUCKET mtfpm-dev2-s3-mtfdmstaging-us-east-1 --enable-metrics true --enable-job-insights true  --JOB_RUN_ID jr_1b393efcadd13377ef68b623a46d3e7da6058d31c8cad2f69e184d0c086eb7dd --scriptLocation s3://mtf-pm-glue-dev2-scripts/scripts/load-bank-file-stg-dev2.py --job-language python --tenant-internal glue
+
+openjdk version "17.0.18" 2026-01-20 LTS
+
+OpenJDK Runtime Environment Corretto-17.0.18.9.1 (build 17.0.18+9-LTS)
+
+OpenJDK 64-Bit Server VM Corretto-17.0.18.9.1 (build 17.0.18+9-LTS, mixed mode, sharing)
+
+26/03/10 21:10:22 INFO GlueBootstrap: Glue Bootstrapping...
+
+26/03/10 21:10:22 INFO GlueBootstrap: Glue Bootstrapping the driver...
+
+26/03/10 21:10:22 INFO GlueBootstrap: Downloading Glue libs...
+
+26/03/10 21:10:23 WARN VersionInfoUtils: The AWS SDK for Java 1.x entered maintenance mode starting July 31, 2024 and will reach end of support on December 31, 2025. For more information, see https://aws.amazon.com/blogs/developer/the-aws-sdk-for-java-1-x-is-in-maintenance-mode-effective-july-31-2024/
+You can print where on the file system the AWS SDK for Java 1.x core runtime is located by setting the AWS_JAVA_V1_PRINT_LOCATION environment variable or aws.java.v1.printLocation system property to 'true'.
+This message can be disabled by setting the AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT environment variable or aws.java.v1.disableDeprecationAnnouncement system property to 'true'.
+The AWS SDK for Java 1.x is being used here:
+at java.base/java.lang.Thread.getStackTrace(Thread.java:1619)
+at glue.shaded.com.amazonaws.util.VersionInfoUtils.printDeprecationAnnouncement(VersionInfoUtils.java:81)
+at glue.shaded.com.amazonaws.util.VersionInfoUtils.<clinit>(VersionInfoUtils.java:59)
+at glue.shaded.com.amazonaws.internal.EC2ResourceFetcher.<clinit>(EC2ResourceFetcher.java:44)
+at glue.shaded.com.amazonaws.auth.InstanceMetadataServiceCredentialsFetcher.<init>(InstanceMetadataServiceCredentialsFetcher.java:38)
+at glue.shaded.com.amazonaws.auth.InstanceProfileCredentialsProvider.<init>(InstanceProfileCredentialsProvider.java:111)
+at glue.shaded.com.amazonaws.auth.InstanceProfileCredentialsProvider.<init>(InstanceProfileCredentialsProvider.java:91)
+at glue.shaded.com.amazonaws.auth.InstanceProfileCredentialsProvider.<init>(InstanceProfileCredentialsProvider.java:75)
+at glue.shaded.com.amazonaws.auth.InstanceProfileCredentialsProvider.<clinit>(InstanceProfileCredentialsProvider.java:58)
+at glue.shaded.com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper.initializeProvider(EC2ContainerCredentialsProviderWrapper.java:66)
+at glue.shaded.com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper.<init>(EC2ContainerCredentialsProviderWrapper.java:55)
+at glue.shaded.com.amazonaws.auth.DefaultAWSCredentialsProviderChain.<init>(DefaultAWSCredentialsProviderChain.java:60)
+at glue.shaded.com.amazonaws.auth.DefaultAWSCredentialsProviderChain.<clinit>(DefaultAWSCredentialsProviderChain.java:54)
+at glue.shaded.com.amazonaws.services.s3.AmazonS3ClientBuilder.standard(AmazonS3ClientBuilder.java:46)
+at glue.shaded.com.amazonaws.services.s3.AmazonS3Client.builder(AmazonS3Client.java:740)
+at com.amazonaws.services.glue.GlueLibsDownloader$Builder.getProxyClient(GlueLibsDownloader.java:309)
+at com.amazonaws.services.glue.GlueLibsDownloader$Builder.build(GlueLibsDownloader.java:279)
+at com.amazonaws.services.glue.GlueBootstrap.downloadGlueLibs(GlueBootstrap.java:382)
+at com.amazonaws.services.glue.GlueBootstrap.lambda$setUpGlueAndUserLibs$1(GlueBootstrap.java:133)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+
+26/03/10 21:10:24 INFO AmazonHttpClient: Configuring Proxy. Proxy Host: 169.254.76.0 Proxy Port: 8888
+
+26/03/10 21:10:31 INFO GlueLibsDownloader: Elapsed time: 6855 millis
+
+1773177031904
+
+INFO	2026-03-10T21:10:33,255	11648	com.amazonaws.services.glue.utils.concurrent.PythonModuleTask	[pool-4-thread-1]	25	Setting Up Virtual Env and Application/Customer Provided Python Modules started in async mode
+
+INFO	2026-03-10T21:10:33,259	11652	com.amazonaws.services.glue.PythonModuleInstaller	[pool-4-thread-1]	178	Command to Execute python3.11 -m venv --clear /tmp/glue_venv
+
+INFO	2026-03-10T21:10:33,266	11659	com.amazonaws.services.glue.launch.helpers.PrepareLaunchProperties	[main]	89	Get job script: load-bank-file-stg-dev2.py.
+
+INFO	2026-03-10T21:10:33,301	11694	com.amazonaws.services.glue.launch.helpers.SparkPropsManagerHelper	[main]	85	
+proxy {
+  host = "169.254.76.0"
+  port = 8888
+}
+
+INFO	2026-03-10T21:10:33,301	11694	com.amazonaws.services.glue.launch.helpers.SparkPropsManagerHelper	[main]	86	
+proxy_internal {
+  host = "169.254.76.0"
+  port = 8888
+}
+
+INFO	2026-03-10T21:10:33,305	11698	com.amazonaws.services.glue.utils.EndpointConfig$	[main]	34	 STAGE is prod
+
+INFO	2026-03-10T21:10:33,531	11924	com.amazonaws.services.glue.utils.EndpointConfig$	[main]	88	Endpoints: {credentials_provider=com.amazonaws.auth.DefaultAWSCredentialsProviderChain, glue.endpoint=https://glue.us-east-1.amazonaws.com, lakeformation.endpoint=https://lakeformation.us-east-1.amazonaws.com, jes.endpoint=https://glue-jes-prod.us-east-1.amazonaws.com, region=us-east-1}
+
+INFO	2026-03-10T21:10:33,564	11957	com.amazonaws.services.glue.utils.AWSClientUtils$	[main]	97	AWSClientUtils: create aws sts client with conf: proxy host169.254.76.0, proxy port 8888
+
+INFO	2026-03-10T21:10:34,359	12752	com.amazonaws.services.gluedi.sensei.autodebugging.AutoDebuggingProxy	[main]	198	initializing AutoDebuggingProxy
+
+INFO	2026-03-10T21:10:34,381	12774	com.amazonaws.services.gluedi.sensei.autodebugging.AutoDebuggingProxy	[main]	203	registering spark listeners
+
+INFO	2026-03-10T21:10:34,407	12800	com.amazonaws.services.glue.launch.helpers.SparkPropsManagerHelper	[main]	114	optimizeParallelismConfigs started 
+
+INFO	2026-03-10T21:10:34,414	12807	com.amazonaws.services.glue.launch.helpers.LoggerPropsManager	[main]	31	setupLoggerProperties...
+
+WARN	2026-03-10T21:10:34,417	12810	com.amazonaws.services.glue.launch.helpers.LoggerPropsManager	[main]	60	Logger setup failed for exception analysis: Cannot invoke "java.net.URL.toURI()" because the return value of "java.lang.Class.getResource(String)" is null
+
+INFO	2026-03-10T21:10:34,420	12813	com.amazonaws.services.glue.FileDownloader	[main]	96	downloading /tmp/glue-1281822938372850505log4j2.properties file to destination location: /tmp/glue-job-7332023382906297262/glue-1281822938372850505log4j2.properties
+
+INFO	2026-03-10T21:10:35,043	13436	com.amazonaws.services.glue.launch.helpers.LoggerPropsManager	[main]	78	setting up the log4j.configurationFile=/tmp/glue-job-7332023382906297262/glue-1281822938372850505log4j2.properties
+
+INFO	2026-03-10T21:10:35,061	13454	com.amazonaws.services.glue.PrepareLaunch	[main]	266	Creating directory /tmp/glue-job-7332023382906297262/aws_glue_connectors
+
+INFO	2026-03-10T21:10:35,062	13455	com.amazonaws.services.glue.PrepareLaunch	[main]	266	Creating directory /tmp/glue-job-7332023382906297262/aws_glue_connectors/selected
+
+INFO	2026-03-10T21:10:35,062	13455	com.amazonaws.services.glue.PrepareLaunch	[main]	266	Creating directory /tmp/glue-job-7332023382906297262/exception_catch
+
+INFO	2026-03-10T21:10:35,062	13455	com.amazonaws.services.glue.PrepareLaunch	[main]	266	Creating directory /tmp/glue-job-7332023382906297262/amazon
+
+INFO	2026-03-10T21:10:35,063	13456	com.amazonaws.services.glue.PrepareLaunch	[main]	266	Creating directory /tmp/glue-job-7332023382906297262/amazon/certs
+
+INFO	2026-03-10T21:10:35,063	13456	com.amazonaws.services.glue.PrepareLaunch	[main]	266	Creating directory /tmp/glue-job-7332023382906297262/aws_glue_connectors/selected/native
+
+INFO	2026-03-10T21:10:35,063	13456	com.amazonaws.services.glue.PrepareLaunch	[main]	266	Creating directory /tmp/glue-job-7332023382906297262/aws_glue_connectors/marketplace
+
+INFO	2026-03-10T21:10:35,152	13545	com.amazonaws.services.glue.utils.AWSClientUtils$	[main]	60	AWSClientUtils: getGlueClient. proxy host 169.254.76.0, proxy port 8888
+
+INFO	2026-03-10T21:10:36,437	14830	com.amazonaws.services.glue.connections.wrapper.jdbc.JDBCConnectionWrapper	[main]	55	GLUE_CONNECTIVITY: retrieved connection properties.
+
+INFO	2026-03-10T21:10:36,438	14831	com.amazonaws.services.glue.connections.wrapper.jdbc.JDBCConnectionWrapper	[main]	68	GLUE_CONNECTIVITY: connection schema version: 1.
+
+INFO	2026-03-10T21:10:36,438	14831	com.amazonaws.services.glue.launch.helpers.ConnectionsManager	[main]	106	Custom cert path: 
+
+INFO	2026-03-10T21:10:36,438	14831	com.amazonaws.services.glue.launch.helpers.ConnectionsManager	[main]	78	GLUE_CONNECTIVITY: attached connection types: ListBuffer()
+
+INFO	2026-03-10T21:10:36,671	15064	com.amazonaws.services.glue.PrepareLaunch	[main]	196	list of connectors to be added in classpath: List()
+
+INFO	2026-03-10T21:10:36,672	15065	com.amazonaws.services.glue.FileDownloader	[main]	96	downloading s3://mtf-pm-glue-dev2-scripts/scripts/load-bank-file-stg-dev2.py file to destination location: /tmp/glue-job-7332023382906297262/load-bank-file-stg-dev2.py
+
+INFO	2026-03-10T21:10:37,088	15481	com.amazonaws.services.glue.utils.AWSS3Utils$	[main]	29	Encoding S3 URI s3://mtf-pm-glue-dev2-scripts/scripts/load-bank-file-stg-dev2.py
+
+INFO	2026-03-10T21:10:37,088	15481	com.amazonaws.services.glue.utils.AWSS3Utils$	[main]	34	Encoded S3 URI to s3://mtf-pm-glue-dev2-scripts/scripts/load-bank-file-stg-dev2.py
+
+INFO	2026-03-10T21:10:37,095	15488	com.amazonaws.services.glue.FileDownloader	[main]	139	Download bucket: mtf-pm-glue-dev2-scripts key: scripts/load-bank-file-stg-dev2.py to /tmp/glue-job-7332023382906297262/load-bank-file-stg-dev2.py with usingProxy: false and isProxyDisabled: false
+
+INFO	2026-03-10T21:10:38,096	16489	com.amazonaws.services.glue.launch.helpers.FileManager	[main]	119	Script should be downloaded at /tmp/glue-job-7332023382906297262/load-bank-file-stg-dev2.py 
+
+INFO	2026-03-10T21:10:38,096	16489	com.amazonaws.services.glue.FileDownloader	[sdk-async-response-5-0]	146	Object downloaded. Details: GetObjectResponse(AcceptRanges=bytes, LastModified=2026-03-10T14:51:43Z, ContentLength=57906, ETag="1588ce4e07a089f915ca977249f0da1d", VersionId=v4qpQRQTnDA5KZ3byJ0gduamdLAdb9i5, ContentType=application/octet-stream; charset=UTF-8, ServerSideEncryption=AES256, Metadata={})
+
+INFO	2026-03-10T21:10:41,976	20369	com.amazonaws.services.glue.PythonModuleInstaller	[pool-4-thread-1]	178	Command to Execute unzip /tmp/glue-job-7332023382906297262/python/njFdJ6-AWSGlueDataplanePython-5.0.950.py.zip -d /tmp/glue-job-7332023382906297262/python/njFdJ6-AWSGlueDataplanePython-5.0.950
+
+INFO	2026-03-10T21:10:42,004	20397	com.amazonaws.services.glue.PythonModuleInstaller	[pool-4-thread-1]	178	Command to Execute /usr/bin/bash /tmp/glue-job-7332023382906297262/pythonmodules/pythonmoduleinstaller.sh /tmp/glue_venv --no-index --no-deps /tmp/glue-job-7332023382906297262/python/njFdJ6-AWSGlueDataplanePython-5.0.950/amzn_awsgluelibs-5.0.950-py3-none-any.whl
+
+INFO	2026-03-10T21:10:44,890	23283	com.amazonaws.services.glue.PythonModuleInstaller	[pool-4-thread-1]	178	Command to Execute unzip /tmp/glue-job-7332023382906297262/python/0zp0Wh-AwsGlueMLLibs.py.zip -d /tmp/glue-job-7332023382906297262/python/0zp0Wh-AwsGlueMLLibs
+
+INFO	2026-03-10T21:10:44,895	23288	com.amazonaws.services.glue.PythonModuleInstaller	[pool-4-thread-1]	178	Command to Execute /usr/bin/bash /tmp/glue-job-7332023382906297262/pythonmodules/pythonmoduleinstaller.sh /tmp/glue_venv --no-index --no-deps /tmp/glue-job-7332023382906297262/python/0zp0Wh-AwsGlueMLLibs/amzn_awsgluemlpythonlibs-1.0-py3-none-any.whl
+
+INFO	2026-03-10T21:10:51,924	30317	com.amazonaws.services.glue.PythonModuleInstaller	[pool-4-thread-1]	178	Command to Execute /usr/bin/bash /tmp/glue-job-7332023382906297262/pythonmodules/createvenvzip.sh /tmp/glue_venv /tmp/glue-job-7332023382906297262_glue_venv.zip
+
+INFO	2026-03-10T21:10:52,083	30476	com.amazonaws.services.glue.utils.concurrent.PythonModuleTask	[pool-4-thread-1]	39	Setting Up Virtual Env and Application Python Modules has been completed in async mode
+
+INFO	2026-03-10T21:10:52,094	30487	com.amazonaws.services.glue.utils.concurrent.GlueConcurrentAsyncProcessingService	[main]	50	shutdownAsyncProcessing has been Started
+
+INFO	2026-03-10T21:10:52,095	30488	com.amazonaws.services.glue.utils.concurrent.GlueConcurrentAsyncProcessingService	[main]	76	shutdownAsyncProcessing has been completed
+
+Running autoDebugger shutdown hook.
+
+Launching ...
+
+Tue Mar 10 21:10:52 UTC 2026
+
+INFO	2026-03-10T21:10:54,989	2392	com.amazonaws.services.glue.SparkUICleaner	[main]	60	SparkUILogFileCleanerThread started
+
+INFO	2026-03-10T21:10:55,001	2404	com.amazonaws.services.glue.LogPusher	[main]	60	standardLogging: false - logs will be written with job run ID or session ID
+
+INFO	2026-03-10T21:10:55,006	2409	com.amazonaws.services.glue.LogPusher	[main]	60	legacyLogging: false - logs will be written with spark application ID
+
+INFO	2026-03-10T21:10:56,323	3726	com.amazon.ws.emr.hadoop.fs.util.PlatformInfo	[main]	56	Unable to read clusterId from http://localhost:8321/configuration, trying extra instance data file: /var/lib/instance-controller/extraInstanceData.json
+
+INFO	2026-03-10T21:10:56,324	3727	com.amazon.ws.emr.hadoop.fs.util.PlatformInfo	[main]	63	Unable to read clusterId from /var/lib/instance-controller/extraInstanceData.json, trying EMR job-flow data file: /var/lib/info/job-flow.json
+
+INFO	2026-03-10T21:10:56,325	3728	com.amazon.ws.emr.hadoop.fs.util.PlatformInfo	[main]	71	Unable to read clusterId from /var/lib/info/job-flow.json, out of places to look
+
+WARN	2026-03-10T21:10:57,101	4504	com.amazonaws.util.VersionInfoUtils	[main]	85	The AWS SDK for Java 1.x entered maintenance mode starting July 31, 2024 and will reach end of support on December 31, 2025. For more information, see https://aws.amazon.com/blogs/developer/the-aws-sdk-for-java-1-x-is-in-maintenance-mode-effective-july-31-2024/
+You can print where on the file system the AWS SDK for Java 1.x core runtime is located by setting the AWS_JAVA_V1_PRINT_LOCATION environment variable or aws.java.v1.printLocation system property to 'true'.
+This message can be disabled by setting the AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT environment variable or aws.java.v1.disableDeprecationAnnouncement system property to 'true'.
+The AWS SDK for Java 1.x is being used here:
+at java.base/java.lang.Thread.getStackTrace(Thread.java:1619)
+at com.amazonaws.util.VersionInfoUtils.printDeprecationAnnouncement(VersionInfoUtils.java:81)
+at com.amazonaws.util.VersionInfoUtils.<clinit>(VersionInfoUtils.java:59)
+at com.amazonaws.internal.EC2ResourceFetcher.<clinit>(EC2ResourceFetcher.java:44)
+at com.amazonaws.auth.InstanceMetadataServiceCredentialsFetcher.<init>(InstanceMetadataServiceCredentialsFetcher.java:38)
+at com.amazonaws.auth.InstanceProfileCredentialsProvider.<init>(InstanceProfileCredentialsProvider.java:111)
+at com.amazonaws.auth.InstanceProfileCredentialsProvider.<init>(InstanceProfileCredentialsProvider.java:91)
+at com.amazonaws.auth.InstanceProfileCredentialsProvider.<init>(InstanceProfileCredentialsProvider.java:75)
+at com.amazonaws.auth.InstanceProfileCredentialsProvider.<clinit>(InstanceProfileCredentialsProvider.java:58)
+at com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper.initializeProvider(EC2ContainerCredentialsProviderWrapper.java:66)
+at com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper.<init>(EC2ContainerCredentialsProviderWrapper.java:55)
+at com.amazonaws.auth.DefaultAWSCredentialsProviderChain.<init>(DefaultAWSCredentialsProviderChain.java:60)
+at com.amazonaws.auth.DefaultAWSCredentialsProviderChain.<clinit>(DefaultAWSCredentialsProviderChain.java:54)
+at java.base/java.lang.Class.forName0(Native Method)
+at java.base/java.lang.Class.forName(Class.java:377)
+at com.amazon.ws.emr.hadoop.********.DefaultAWSCredentialsProviderFactory.getCustomAwsCredentialsProvider(DefaultAWSCredentialsProviderFactory.java:61)
+at com.amazon.ws.emr.hadoop.********.DefaultAWSCredentialsProviderFactory.getAwsCredentialsProviderChain(DefaultAWSCredentialsProviderFactory.java:32)
+at com.amazon.ws.emr.hadoop.********.DefaultAWSCredentialsProviderFactory.getAwsCredentialsProvider(DefaultAWSCredentialsProviderFactory.java:26)
+at com.amazon.ws.emr.hadoop.********.EmrFSProdModule.getAwsCredentialsProvider(EmrFSProdModule.java:81)
+at com.amazon.ws.emr.hadoop.********.EmrFSProdModule.createAmazonS3LiteClient(EmrFSProdModule.java:93)
+at com.amazon.ws.emr.hadoop.********.EmrFSProdModule.createAmazonS3Lite(EmrFSProdModule.java:266)
+at com.amazon.ws.emr.hadoop.********.EmrFSBaseModule.provideAmazonS3Lite(EmrFSBaseModule.java:112)
+at com.amazon.ws.emr.hadoop.********.EmrFSBaseModule$$FastClassByGuice$$1369406.GUICE$TRAMPOLINE(<generated>)
+at com.amazon.ws.emr.hadoop.********.EmrFSBaseModule$$FastClassByGuice$$1369406.apply(<generated>)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.ProviderMethod$FastClassProviderMethod.doProvision(ProviderMethod.java:260)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.ProviderMethod.doProvision(ProviderMethod.java:171)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.InternalProviderInstanceBindingImpl$CyclicFactory.provision(InternalProviderInstanceBindingImpl.java:185)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.InternalProviderInstanceBindingImpl$CyclicFactory.get(InternalProviderInstanceBindingImpl.java:162)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.ProviderToInternalFactoryAdapter.get(ProviderToInternalFactoryAdapter.java:40)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.SingletonScope$1.get(SingletonScope.java:169)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.InternalFactoryToProviderAdapter.get(InternalFactoryToProviderAdapter.java:45)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.SingleParameterInjector.inject(SingleParameterInjector.java:40)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.SingleParameterInjector.getAll(SingleParameterInjector.java:60)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.ProviderMethod.doProvision(ProviderMethod.java:171)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.InternalProviderInstanceBindingImpl$CyclicFactory.provision(InternalProviderInstanceBindingImpl.java:185)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.InternalProviderInstanceBindingImpl$CyclicFactory.get(InternalProviderInstanceBindingImpl.java:162)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.ProviderToInternalFactoryAdapter.get(ProviderToInternalFactoryAdapter.java:40)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.SingletonScope$1.get(SingletonScope.java:169)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.InternalFactoryToProviderAdapter.get(InternalFactoryToProviderAdapter.java:45)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.SingleFieldInjector.inject(SingleFieldInjector.java:50)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.MembersInjectorImpl.injectMembers(MembersInjectorImpl.java:146)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.ConstructorInjector.provision(ConstructorInjector.java:124)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.ConstructorInjector.construct(ConstructorInjector.java:91)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.ConstructorBindingImpl$Factory.get(ConstructorBindingImpl.java:300)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.FactoryProxy.get(FactoryProxy.java:60)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.InjectorImpl$1.get(InjectorImpl.java:1101)
+at com.amazon.ws.emr.hadoop.fs.shaded.com.google.inject.internal.InjectorImpl.getInstance(InjectorImpl.java:1134)
+at com.amazon.ws.emr.hadoop.fs.EmrFileSystem.initialize(EmrFileSystem.java:95)
+at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3670)
+at org.apache.hadoop.fs.FileSystem.access$300(FileSystem.java:171)
+at org.apache.hadoop.fs.FileSystem$Cache.getInternal(FileSystem.java:3771)
+at org.apache.hadoop.fs.FileSystem$Cache.get(FileSystem.java:3722)
+at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:564)
+at org.apache.hadoop.fs.Path.getFileSystem(Path.java:374)
+at com.amazonaws.services.glue.LogPusher.<init>(LogPusher.scala:25)
+at com.amazonaws.services.glue.ProcessLauncher.$anonfun$logPusher$3(ProcessLauncher.scala:256)
+at scala.Option.map(Option.scala:230)
+at com.amazonaws.services.glue.ProcessLauncher.$anonfun$logPusher$2(ProcessLauncher.scala:222)
+at scala.Option$WithFilter.flatMap(Option.scala:271)
+at com.amazonaws.services.glue.ProcessLauncher.<init>(ProcessLauncher.scala:213)
+at com.amazonaws.services.glue.ProcessLauncher.<init>(ProcessLauncher.scala:194)
+at com.amazonaws.services.glue.ProcessLauncher$.main(ProcessLauncher.scala:34)
+at com.amazonaws.services.glue.ProcessLauncher.main(ProcessLauncher.scala)
+
+INFO	2026-03-10T21:10:57,756	5159	com.amazon.ws.emr.hadoop.********.DefaultAWSCredentialsProviderFactory	[main]	72	Unable to create provider using constructor: DefaultAWSCredentialsProviderChain(java.net.URI, org.apache.hadoop.conf.Configuration)
+
+INFO	2026-03-10T21:10:57,953	5356	com.amazon.ws.emr.hadoop.fs.util.ClientConfigurationFactory	[main]	85	Set initial getObject socket timeout to 2000 ms.
+
+INFO	2026-03-10T21:10:58,421	5824	com.amazonaws.services.glue.utils.EndpointConfig$	[main]	34	 STAGE is prod
+
+INFO	2026-03-10T21:10:58,667	6070	com.amazonaws.services.glue.utils.EndpointConfig$	[main]	88	Endpoints: {credentials_provider=com.amazonaws.auth.DefaultAWSCredentialsProviderChain, glue.endpoint=https://glue.us-east-1.amazonaws.com, lakeformation.endpoint=https://lakeformation.us-east-1.amazonaws.com, jes.endpoint=https://glue-jes-prod.us-east-1.amazonaws.com, region=us-east-1}
+
+INFO	2026-03-10T21:10:58,735	6138	com.amazonaws.services.gluedi.sensei.autodebugging.AutoDebuggingProxy	[main]	198	initializing AutoDebuggingProxy
+
+INFO	2026-03-10T21:10:58,774	6177	com.amazonaws.services.glue.SafeLogging	[main]	60	Initializing logging subsystem
+
+INFO	2026-03-10T21:11:11,597	19000	org.apache.spark.emr.EMRParamSideChannel	[Thread-10]	177	Setting FGAC mode to false
+
+INFO	2026-03-10T21:11:11,609	19012	org.apache.spark.SparkContext	[Thread-10]	60	Running Spark version 3.5.4-amzn-0
+
+INFO	2026-03-10T21:11:11,610	19013	org.apache.spark.SparkContext	[Thread-10]	60	OS info Linux, 5.10.248-247.988.amzn2.x86_64, amd64
+
+INFO	2026-03-10T21:11:11,611	19014	org.apache.spark.SparkContext	[Thread-10]	60	Java version 17.0.18
+
+INFO	2026-03-10T21:11:11,645	19048	org.apache.spark.resource.ResourceUtils	[Thread-10]	60	==============================================================
+
+INFO	2026-03-10T21:11:11,646	19049	org.apache.spark.resource.ResourceUtils	[Thread-10]	60	No custom resources configured for spark.driver.
+
+INFO	2026-03-10T21:11:11,646	19049	org.apache.spark.resource.ResourceUtils	[Thread-10]	60	==============================================================
+INFO	2026-03-10T21:11:11,647	19050	org.apache.spark.SparkContext	[Thread-10]	60	Submitted application: nativespark-load-bank-file-stg-dev2-jr_1b393efcadd13377ef68b623a46d3e7da6058d31c8cad2f69e184d0c086eb7dd
+
+INFO	2026-03-10T21:11:11,679	19082	org.apache.spark.resource.ResourceProfile	[Thread-10]	60	Default ResourceProfile created, executor resources: Map(executorType -> name: executorType, amount: 1, script: , vendor: , cores -> name: cores, amount: 4, script: , vendor: , memory -> name: memory, amount: 10240, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+
+INFO	2026-03-10T21:11:11,692	19095	org.apache.spark.resource.ResourceProfile	[Thread-10]	60	Limiting resource is cpus at 4 tasks per executor
+
+INFO	2026-03-10T21:11:11,695	19098	org.apache.spark.resource.ResourceProfileManager	[Thread-10]	60	Added ResourceProfile id: 0
+
+INFO	2026-03-10T21:11:11,699	19102	org.apache.spark.resource.ResourceProfile	[Thread-10]	60	User executor ResourceProfile created, executor resources: Map(executorType -> name: executorType, amount: 1, script: , vendor: , cores -> name: cores, amount: 4, script: , vendor: , memory -> name: memory, amount: 10240, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+
+INFO	2026-03-10T21:11:11,700	19103	org.apache.spark.resource.ResourceProfile	[Thread-10]	60	Limiting resource is cpus at 4 tasks per executor
+
+INFO	2026-03-10T21:11:11,700	19103	org.apache.spark.resource.ResourceProfileManager	[Thread-10]	60	Added ResourceProfile id: 1
+
+INFO	2026-03-10T21:11:11,777	19180	org.apache.spark.SecurityManager	[Thread-10]	60	Changing view acls to: hadoop
+
+INFO	2026-03-10T21:11:11,778	19181	org.apache.spark.SecurityManager	[Thread-10]	60	Changing modify acls to: hadoop
+
+INFO	2026-03-10T21:11:11,779	19182	org.apache.spark.SecurityManager	[Thread-10]	60	Changing view acls groups to: 
+
+INFO	2026-03-10T21:11:11,779	19182	org.apache.spark.SecurityManager	[Thread-10]	60	Changing modify acls groups to: 
+
+INFO	2026-03-10T21:11:11,780	19183	org.apache.spark.SecurityManager	[Thread-10]	60	SecurityManager: authentication enabled; ui acls disabled; users with view permissions: hadoop; groups with view permissions: EMPTY; users with modify permissions: hadoop; groups with modify permissions: EMPTY
+
+INFO	2026-03-10T21:11:12,144	19547	org.apache.spark.util.Utils	[Thread-10]	60	Successfully started service 'sparkDriver' on port 43085.
+
+INFO	2026-03-10T21:11:12,200	19603	org.apache.spark.SparkEnv	[Thread-10]	60	Registering MapOutputTracker
+
+INFO	2026-03-10T21:11:12,249	19652	org.apache.spark.SparkEnv	[Thread-10]	60	Registering BlockManagerMaster
+
+INFO	2026-03-10T21:11:12,273	19676	org.apache.spark.storage.BlockManagerMasterEndpoint	[Thread-10]	60	Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+
+INFO	2026-03-10T21:11:12,274	19677	org.apache.spark.storage.BlockManagerMasterEndpoint	[Thread-10]	60	BlockManagerMasterEndpoint up
+
+INFO	2026-03-10T21:11:12,279	19682	org.apache.spark.SparkEnv	[Thread-10]	60	Registering BlockManagerMasterHeartbeat
+
+INFO	2026-03-10T21:11:12,296	19699	org.apache.spark.storage.DiskBlockManager	[Thread-10]	60	Created local directory at /tmp/blockmgr-81a5d55d-03a9-4e31-be73-3aafa7a4245d
+
+INFO	2026-03-10T21:11:12,313	19716	org.apache.spark.storage.memory.MemoryStore	[Thread-10]	60	MemoryStore started with capacity 5.8 GiB
+
+INFO	2026-03-10T21:11:12,331	19734	org.apache.spark.SparkEnv	[Thread-10]	60	Registering OutputCommitCoordinator
+
+INFO	2026-03-10T21:11:12,337	19740	org.apache.spark.subresultcache.SubResultCacheManager	[Thread-10]	60	Sub-result caches are disabled.
+
+INFO	2026-03-10T21:11:12,369	19772	org.apache.spark.SparkContext	[Thread-10]	60	Added JAR /tmp/glue-job-7332023382906297262/jars/u3ZXGu-aws-glue-di-package-5.0.950.jar at spark://10.157.136.29:43085/jars/u3ZXGu-aws-glue-di-package-5.0.950.jar with timestamp 1773177071599
+
+INFO	2026-03-10T21:11:12,371	19774	org.apache.spark.SparkContext	[Thread-10]	60	Added JAR /tmp/glue-job-7332023382906297262/jars/awfyjZ-AwsGlueMLLibs.jar at spark://10.157.136.29:43085/jars/awfyjZ-AwsGlueMLLibs.jar with timestamp 1773177071599
+
+INFO	2026-03-10T21:11:12,417	19820	org.apache.spark.SparkContext	[Thread-10]	60	Added archive /tmp/glue-job-7332023382906297262_glue_venv.zip#python_environment at spark://10.157.136.29:43085/files/glue-job-7332023382906297262_glue_venv.zip with timestamp 1773177071599
+
+INFO	2026-03-10T21:11:12,419	19822	org.apache.spark.util.Utils	[Thread-10]	60	Copying /tmp/glue-job-7332023382906297262_glue_venv.zip to /tmp/spark-a26c721f-34a7-4409-80da-5db833336b82/glue-job-7332023382906297262_glue_venv.zip
+
+INFO	2026-03-10T21:11:12,476	19879	org.apache.spark.SparkContext	[Thread-10]	60	Unpacking an archive /tmp/glue-job-7332023382906297262_glue_venv.zip#python_environment from /tmp/spark-a26c721f-34a7-4409-80da-5db833336b82/glue-job-7332023382906297262_glue_venv.zip to /tmp/spark-6b6e18ea-98ae-46b4-9b30-5965343bb729/userFiles-434ad265-a8f3-42f5-ab48-0b7e702d95a7/python_environment
+
+INFO	2026-03-10T21:11:13,165	20568	org.apache.spark.scheduler.cluster.glue.JESClusterManager	[Thread-10]	121	Python path for executors: python_environment
+
+INFO	2026-03-10T21:11:13,168	20571	org.apache.spark.deploy.glue.client.GlueRMClientFactory	[Thread-10]	60	JESClusterManager: Initializing JES client with proxy: http://169.254.76.0:8888
+
+INFO	2026-03-10T21:11:13,169	20572	org.apache.spark.deploy.glue.client.GlueRMClientFactory	[Thread-10]	60	JESClusterManager: Initializing JES client with endpoint: https://glue-jes-prod.us-east-1.amazonaws.com
+
+INFO	2026-03-10T21:11:14,018	21421	org.apache.spark.scheduler.cluster.glue.JESSchedulerBackend	[Thread-10]	60	JESSchedulerBackend
+
+INFO	2026-03-10T21:11:14,075	21478	org.apache.spark.scheduler.cluster.glue.JESSchedulerBackend	[Thread-10]	60	Starting JES Scheduler Backend.
+
+INFO	2026-03-10T21:11:14,077	21480	org.apache.spark.scheduler.cluster.glue.JESSchedulerBackend	[Thread-10]	60	Set total expected executors: rpId: 0, numExecs: 1
+
+INFO	2026-03-10T21:11:14,078	21481	org.apache.spark.scheduler.cluster.glue.JESSchedulerBackend	[Thread-10]	60	Initial executors are 1
+
+INFO	2026-03-10T21:11:14,089	21492	org.apache.spark.scheduler.cluster.glue.JESSchedulerBackend	[executorAllocator]	60	Creating executors task for application spark-application-1773177074011 with resource profile 0
+
+INFO	2026-03-10T21:11:14,095	21498	org.apache.spark.scheduler.cluster.glue.allocator.ExecutorTaskAllocator	[executorAllocator]	60	Creating new task with arguments List(--driver-url, spark://CoarseGrainedScheduler@10.157.136.29:43085, --executor-id, 1, --app-id, spark-application-1773177074011, --cores, 4, --resourceProfileId, 0)
+
+INFO	2026-03-10T21:11:14,099	21502	org.apache.spark.deploy.glue.client.GlueTaskGroupRMClient	[executorAllocator]	60	creating executor task for executor 1; clientToken gr_tg-e0cad380ead8fa00e2107b1c9e674ebd1bd21aa0_e_1_a_spark-application-1773177074011_p_1
+
+INFO	2026-03-10T21:11:14,115	21518	org.apache.spark.util.Utils	[Thread-10]	60	Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 45303.
+
+INFO	2026-03-10T21:11:14,115	21518	org.apache.spark.network.netty.NettyBlockTransferService	[Thread-10]	88	Server created on 10.157.136.29:45303
+
+INFO	2026-03-10T21:11:14,117	21520	org.apache.spark.deploy.glue.client.GlueTaskGroupRMClient	[executorAllocator]	60	Sending request to JES
+
+INFO	2026-03-10T21:11:14,120	21523	org.apache.spark.storage.BlockManager	[Thread-10]	60	Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+
+INFO	2026-03-10T21:11:14,130	21533	org.apache.spark.storage.BlockManagerMaster	[Thread-10]	60	Registering BlockManager BlockManagerId(driver, 10.157.136.29, 45303, None)
+
+INFO	2026-03-10T21:11:14,134	21537	org.apache.spark.storage.BlockManagerMasterEndpoint	[dispatcher-BlockManagerMaster]	60	Registering block manager 10.157.136.29:45303 with 5.8 GiB RAM, BlockManagerId(driver, 10.157.136.29, 45303, None)
+
+INFO	2026-03-10T21:11:14,140	21543	org.apache.spark.storage.BlockManagerMaster	[Thread-10]	60	Registered BlockManager BlockManagerId(driver, 10.157.136.29, 45303, None)
+
+INFO	2026-03-10T21:11:14,141	21544	org.apache.spark.storage.BlockManager	[Thread-10]	60	Initialized BlockManager: BlockManagerId(driver, 10.157.136.29, 45303, None)
+
+INFO	2026-03-10T21:11:14,261	21664	org.apache.spark.metrics.sink.GlueCloudwatchSink	[Thread-10]	59	GlueCloudwatchSink: get cloudwatch client using proxy: host 169.254.76.0, port 8888
+
+INFO	2026-03-10T21:11:14,576	21979	org.apache.spark.metrics.sink.GlueCloudwatchSink	[Thread-10]	16	CloudwatchSink: jobName: load-bank-file-stg-dev2 jobRunId: jr_1b393efcadd13377ef68b623a46d3e7da6058d31c8cad2f69e184d0c086eb7dd
+
+INFO	2026-03-10T21:11:14,906	22309	org.apache.spark.deploy.history.SingleEventLogFileWriter	[Thread-10]	60	Logging events to file:/var/log/spark/apps/spark-application-1773177074011.inprogress
+
+INFO	2026-03-10T21:11:15,097	22500	com.amazonaws.services.glueexceptionanalysis.EventLogFileWriter	[Thread-10]	51	Started file writer for com.amazonaws.services.glueexceptionanalysis.EventLogFileWriter
+
+INFO	2026-03-10T21:11:15,107	22510	org.apache.spark.deploy.glue.client.GlueTaskGroupRMClient	[executorAllocator]	60	createChildTask API response code 200
+
+INFO	2026-03-10T21:11:15,108	22511	org.apache.spark.scheduler.cluster.glue.allocator.ExecutorTaskAllocator	[executorAllocator]	60	executor task g-d306f94053f5db71550d821074a4d8f8ab414e4b created for executor 1 in resource profile 0
+
+INFO	2026-03-10T21:11:15,132	22535	com.amazonaws.services.gluedi.sensei.autodebugging.writers.AutoDebuggingEventLogFileWriter	[Thread-10]	62	Started file writer.
+
+INFO	2026-03-10T21:11:15,137	22540	glue.ch.cern.sparkmeasure.FlightRecorderStageMetrics	[Thread-10]	173	Using json as serialization format.
+
+INFO	2026-03-10T21:11:15,138	22541	glue.ch.cern.sparkmeasure.FlightRecorderStageMetrics	[Thread-10]	195	Writing output to /tmp/stageMetrics_flightRecorder
+
+INFO	2026-03-10T21:11:15,139	22542	glue.ch.cern.sparkmeasure.FlightRecorderTaskMetrics	[Thread-10]	173	Using json as serialization format.
+
+INFO	2026-03-10T21:11:15,140	22543	glue.ch.cern.sparkmeasure.FlightRecorderTaskMetrics	[Thread-10]	195	Writing output to /tmp/taskMetrics_flightRecorder
+
+INFO	2026-03-10T21:11:15,141	22544	org.apache.spark.SparkContext	[Thread-10]	60	Registered listener com.amazonaws.services.glueexceptionanalysis.GlueExceptionAnalysisListener
+
+INFO	2026-03-10T21:11:15,141	22544	org.apache.spark.SparkContext	[Thread-10]	60	Registered listener com.amazonaws.services.gluedi.sensei.autodebugging.listeners.AutoDebuggingListener
+
+INFO	2026-03-10T21:11:15,141	22544	org.apache.spark.SparkContext	[Thread-10]	60	Registered listener glue.ch.cern.sparkmeasure.FlightRecorderStageMetrics
+
+INFO	2026-03-10T21:11:15,142	22545	org.apache.spark.SparkContext	[Thread-10]	60	Registered listener glue.ch.cern.sparkmeasure.FlightRecorderTaskMetrics
+
+INFO	2026-03-10T21:11:15,178	22581	org.apache.spark.scheduler.cluster.glue.JESSchedulerBackend	[Thread-10]	60	getDriverLogUrls Map()
+
+INFO	2026-03-10T21:11:15,188	22591	org.apache.spark.executor.ExecutorLogUrlHandler	[Thread-10]	60	Fail to renew executor log urls: some of required attributes are missing in app's event log.. Required: Set(CONTAINER_ID) / available: Set(). Falling back to show app's original log urls.
+
+INFO	2026-03-10T21:11:15,197	22600	org.apache.spark.scheduler.cluster.glue.JESSchedulerBackend	[Thread-10]	60	SchedulerBackend is ready for scheduling beginning after reached minRegisteredResourcesRatio: 0.0
+
+INFO	2026-03-10T21:11:15,623	23026	com.amazonaws.services.glue.GlueContext	[Thread-10]	121	GlueMetrics configured and enabled
+
+INFO	2026-03-10T21:11:15,625	23028	org.apache.spark.metrics.source.ObservabilityTaskInfoRecorderListener	[Thread-10]	28	ThroughputMetricsSource is initiated
+
+INFO	2026-03-10T21:11:15,627	23030	org.apache.spark.metrics.source.ObservabilityTaskInfoRecorderListener	[Thread-10]	53	ResourceUtilizationMetricsSource is initiated
+
+INFO	2026-03-10T21:11:15,628	23031	org.apache.spark.metrics.source.StageSkewness	[Thread-10]	29	[Observability] Skewness metric using Skewness Factor = 5
+
+INFO	2026-03-10T21:11:15,629	23032	org.apache.spark.metrics.source.ObservabilityTaskInfoRecorderListener	[Thread-10]	68	PerformanceMetricsSource is initiated
+
+INFO	2026-03-10T21:11:15,630	23033	com.amazonaws.services.glue.GlueContext	[Thread-10]	129	ObservabilityMetrics configured and enabled
+
+INFO	2026-03-10T21:11:16,702	24105	com.amazonaws.services.glue.utils.AWSClientUtils$	[Thread-10]	60	AWSClientUtils: getGlueClient. proxy host 169.254.76.0, proxy port 8888
+
+INFO	2026-03-10T21:11:17,113	24516	com.amazonaws.services.glue.util.DataCatalogWrapper	[Thread-10]	133	DataCatalogWrapper: got connection from glue client with name: RDS2connection and type: JDBC
+
+INFO	2026-03-10T21:11:17,266	24669	com.amazonaws.services.glue.connections.wrapper.jdbc.JDBCConnectionWrapper	[Thread-10]	55	GLUE_CONNECTIVITY: retrieved connection properties.
+
+INFO	2026-03-10T21:11:17,266	24669	com.amazonaws.services.glue.connections.wrapper.jdbc.JDBCConnectionWrapper	[Thread-10]	68	GLUE_CONNECTIVITY: connection schema version: 1.
+
+INFO	2026-03-10T21:11:17,404	24807	com.amazonaws.services.glue.connections.wrapper.jdbc.JDBCConnectionWrapper	[Thread-10]	243	GLUE_CONNECTIVITY: got secrets options from secrets manager.
+
+INFO	2026-03-10T21:11:28,271	35674	com.amazonaws.services.glue.LogPusher	[pool-6-thread-1]	60	uploading file:///var/log/spark/apps to s3://aws-glue-assets-448049811908-us-east-1/sparkHistoryLogs/
+
+INFO	2026-03-10T21:11:30,707	38110	org.apache.spark.scheduler.cluster.glue.JESSchedulerBackend$JESAsSchedulerBackendEndpoint	[dispatcher-CoarseGrainedScheduler]	60	Registered executor NettyRpcEndpointRef(spark-client://Executor) (10.157.136.84:47684) with ID 1,  ResourceProfileId 0
+
+INFO	2026-03-10T21:11:30,709	38112	org.apache.spark.executor.ExecutorLogUrlHandler	[dispatcher-CoarseGrainedScheduler]	60	Fail to renew executor log urls: some of required attributes are missing in app's event log.. Required: Set(CONTAINER_ID) / available: Set(). Falling back to show app's original log urls.
+
+INFO	2026-03-10T21:11:30,711	38114	org.apache.spark.scheduler.cluster.glue.ExecutorEventListener	[spark-listener-group-shared]	60	Got executor added event for 1 @ 1773177090709
+
+INFO	2026-03-10T21:11:30,712	38115	org.apache.spark.scheduler.cluster.glue.allocator.ExecutorTaskAllocator	[spark-listener-group-shared]	60	connected executor 1
+
+INFO	2026-03-10T21:11:30,809	38212	org.apache.spark.storage.BlockManagerMasterEndpoint	[dispatcher-BlockManagerMaster]	60	Registering block manager 10.157.136.84:35181 with 5.8 GiB RAM, BlockManagerId(1, 10.157.136.84, 35181, None)
+
+INFO	2026-03-10T21:11:31,044	38447	org.apache.spark.sql.internal.SharedState	[Thread-10]	60	spark.sql.warehouse.dir is not set, but hive.metastore.warehouse.dir is set. Setting spark.sql.warehouse.dir to the value of hive.metastore.warehouse.dir.
+
+INFO	2026-03-10T21:11:31,048	38451	org.apache.spark.sql.internal.SharedState	[Thread-10]	60	Warehouse path is 'file:/tmp/spark-warehouse'.
+
+INFO	2026-03-10T21:11:33,463	40866	org.opensearch.hadoop.util.Version	[Thread-10]	143	OpenSearch Hadoop v1.2.0 [2a4148055f]
+
+INFO	2026-03-10T21:11:36,909	44312	org.apache.spark.sql.catalyst.expressions.codegen.CodeGenerator	[Thread-10]	60	Code generated in 336.736144 ms
+
+INFO	2026-03-10T21:11:37,059	44462	org.apache.spark.scheduler.DAGScheduler	[dag-scheduler-event-loop]	60	Registering RDD 2 (count at NativeMethodAccessorImpl.java:0) as input to shuffle 0
+
+INFO	2026-03-10T21:11:37,066	44469	org.apache.spark.scheduler.DAGScheduler	[dag-scheduler-event-loop]	60	Got map stage job 0 (count at NativeMethodAccessorImpl.java:0) with 1 output partitions
+
+INFO	2026-03-10T21:11:37,067	44470	org.apache.spark.scheduler.DAGScheduler	[dag-scheduler-event-loop]	60	Final stage: ShuffleMapStage 0 (count at NativeMethodAccessorImpl.java:0)
+
+INFO	2026-03-10T21:11:37,068	44471	org.apache.spark.scheduler.DAGScheduler	[dag-scheduler-event-loop]	60	Parents of final stage: List()
+
+INFO	2026-03-10T21:11:37,069	44472	org.apache.spark.scheduler.DAGScheduler	[dag-scheduler-event-loop]	60	Missing parents: List()
+
+INFO	2026-03-10T21:11:37,099	44502	org.apache.spark.scheduler.DAGScheduler	[dag-scheduler-event-loop]	60	Submitting ShuffleMapStage 0 (MapPartitionsRDD[2] at count at NativeMethodAccessorImpl.java:0), which has no missing parents
+
+INFO	2026-03-10T21:11:37,294	44697	org.apache.spark.storage.memory.MemoryStore	[dag-scheduler-event-loop]	60	Block broadcast_0 stored as values in memory (estimated size 16.1 KiB, free 5.8 GiB)
+
+INFO	2026-03-10T21:11:37,331	44734	org.apache.spark.storage.memory.MemoryStore	[dag-scheduler-event-loop]	60	Block broadcast_0_piece0 stored as bytes in memory (estimated size 8.2 KiB, actual size: 8.2 KiB, free 5.8 GiB)
+
+INFO	2026-03-10T21:11:37,334	44737	org.apache.spark.storage.BlockManagerInfo	[dispatcher-BlockManagerMaster]	60	Added broadcast_0_piece0 in memory on 10.157.136.29:45303 (size: 8.2 KiB, free: 5.8 GiB)
+
+INFO	2026-03-10T21:11:37,338	44741	org.apache.spark.SparkContext	[dag-scheduler-event-loop]	60	Created broadcast 0 from broadcast at DAGScheduler.scala:1664
+
+INFO	2026-03-10T21:11:37,358	44761	org.apache.spark.scheduler.DAGScheduler	[dag-scheduler-event-loop]	60	Submitting 1 missing tasks from ShuffleMapStage 0 (MapPartitionsRDD[2] at count at NativeMethodAccessorImpl.java:0) (first 15 tasks are for partitions Vector(0))
+
+INFO	2026-03-10T21:11:37,359	44762	org.apache.spark.scheduler.TaskSchedulerImpl	[dag-scheduler-event-loop]	60	Adding task set 0.0 with 1 tasks resource profile 0
+
+INFO	2026-03-10T21:11:37,386	44789	org.apache.spark.scheduler.TaskSetManager	[dispatcher-CoarseGrainedScheduler]	60	Starting task 0.0 in stage 0.0 (TID 0) (10.157.136.84, executor 1, partition 0, PROCESS_LOCAL, 9478 bytes) 
+
+INFO	2026-03-10T21:11:37,665	45068	org.apache.spark.storage.BlockManagerInfo	[dispatcher-BlockManagerMaster]	60	Added broadcast_0_piece0 in memory on 10.157.136.84:35181 (size: 8.2 KiB, free: 5.8 GiB)
+
+INFO	2026-03-10T21:11:39,708	47111	org.apache.spark.scheduler.TaskSetManager	[task-result-getter-0]	60	Finished task 0.0 in stage 0.0 (TID 0) in 2333 ms on 10.157.136.84 (executor 1) (1/1)
+
+INFO	2026-03-10T21:11:39,710	47113	org.apache.spark.scheduler.TaskSchedulerImpl	[task-result-getter-0]	60	Removed TaskSet 0.0, whose tasks have all completed, from pool 
+
+INFO	2026-03-10T21:11:39,737	47140	org.apache.spark.scheduler.DAGScheduler	[dag-scheduler-event-loop]	60	ShuffleMapStage 0 (count at NativeMethodAccessorImpl.java:0) finished in 2.600 s
+
+INFO	2026-03-10T21:11:39,746	47149	org.apache.spark.scheduler.DAGScheduler	[dag-scheduler-event-loop]	60	looking for newly runnable stages
+
+INFO	2026-03-10T21:11:39,749	47152	org.apache.spark.scheduler.DAGScheduler	[dag-scheduler-event-loop]	60	running: Set()
+
+INFO	2026-03-10T21:11:39,752	47155	org.apache.spark.scheduler.DAGScheduler	[dag-scheduler-event-loop]	60	waiting: Set()
+
+INFO	2026-03-10T21:11:39,752	47155	org.apache.spark.scheduler.DAGScheduler	[dag-scheduler-event-loop]	60	failed: Set()
+
+INFO	2026-03-10T21:11:39,833	47236	org.apache.spark.sql.catalyst.expressions.codegen.CodeGenerator	[Thread-10]	60	Code generated in 17.376279 ms
+
+INFO	2026-03-10T21:11:39,873	47276	org.apache.spark.SparkContext	[Thread-10]	60	Starting job: count at NativeMethodAccessorImpl.java:0
+
+INFO	2026-03-10T21:11:39,878	47281	org.apache.spark.scheduler.DAGScheduler	[dag-scheduler-event-loop]	60	Got job 1 (count at NativeMethodAccessorImpl.java:0) with 1 output partitions
+
+INFO	2026-03-10T21:11:39,879	47282	org.apache.spark.scheduler.DAGScheduler	[dag-scheduler-event-loop]	60	Final stage: ResultStage 2 (count at NativeMethodAccessorImpl.java:0)
+
+INFO	2026-03-10T21:11:39,880	47283	org.apache.spark.scheduler.DAGScheduler	[dag-scheduler-event-loop]	60	Parents of final stage: List(ShuffleMapStage 1)
+
+INFO	2026-03-10T21:11:39,881	47284	org.apache.spark.scheduler.DAGScheduler	[dag-scheduler-event-loop]	60	Missing parents: List()
+
+INFO	2026-03-10T21:11:39,890	47293	org.apache.spark.scheduler.DAGScheduler	[dag-scheduler-event-loop]	60	Submitting ResultStage 2 (MapPartitionsRDD[5] at count at NativeMethodAccessorImpl.java:0), which has no missing parents
+
+INFO	2026-03-10T21:11:39,909	47312	org.apache.spark.storage.memory.MemoryStore	[dag-scheduler-event-loop]	60	Block broadcast_1 stored as values in memory (estimated size 14.1 KiB, free 5.8 GiB)
+
+INFO	2026-03-10T21:11:39,918	47321	org.apache.spark.storage.memory.MemoryStore	[dag-scheduler-event-loop]	60	Block broadcast_1_piece0 stored as bytes in memory (estimated size 6.7 KiB, actual size: 6.7 KiB, free 5.8 GiB)
+
+INFO	2026-03-10T21:11:39,919	47322	org.apache.spark.storage.BlockManagerInfo	[dispatcher-BlockManagerMaster]	60	Added broadcast_1_piece0 in memory on 10.157.136.29:45303 (size: 6.7 KiB, free: 5.8 GiB)
+
+INFO	2026-03-10T21:11:39,921	47324	org.apache.spark.SparkContext	[dag-scheduler-event-loop]	60	Created broadcast 1 from broadcast at DAGScheduler.scala:1664
+
+INFO	2026-03-10T21:11:39,923	47326	org.apache.spark.scheduler.DAGScheduler	[dag-scheduler-event-loop]	60	Submitting 1 missing tasks from ResultStage 2 (MapPartitionsRDD[5] at count at NativeMethodAccessorImpl.java:0) (first 15 tasks are for partitions Vector(0))
+
+INFO	2026-03-10T21:11:39,923	47326	org.apache.spark.scheduler.TaskSchedulerImpl	[dag-scheduler-event-loop]	60	Adding task set 2.0 with 1 tasks resource profile 0
+
+INFO	2026-03-10T21:11:39,930	47333	org.apache.spark.scheduler.TaskSetManager	[dispatcher-CoarseGrainedScheduler]	60	Starting task 0.0 in stage 2.0 (TID 1) (10.157.136.84, executor 1, partition 0, NODE_LOCAL, 9643 bytes) 
+
+INFO	2026-03-10T21:11:39,957	47360	org.apache.spark.storage.BlockManagerInfo	[dispatcher-BlockManagerMaster]	60	Added broadcast_1_piece0 in memory on 10.157.136.84:35181 (size: 6.7 KiB, free: 5.8 GiB)
+
+INFO	2026-03-10T21:11:40,103	47506	org.apache.spark.MapOutputTrackerMasterEndpoint	[dispatcher-event-loop-1]	60	Asked to send map output locations for shuffle 0 to 10.157.136.84:47684
+
+INFO	2026-03-10T21:11:40,253	47656	org.apache.spark.scheduler.TaskSetManager	[task-result-getter-1]	60	Finished task 0.0 in stage 2.0 (TID 1) in 326 ms on 10.157.136.84 (executor 1) (1/1)
+
+INFO	2026-03-10T21:11:40,255	47658	org.apache.spark.scheduler.DAGScheduler	[dag-scheduler-event-loop]	60	ResultStage 2 (count at NativeMethodAccessorImpl.java:0) finished in 0.354 s

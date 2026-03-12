@@ -1,0 +1,10 @@
+FILENAME|PayeeId|ERROR_DESC
+mtfdm_dev2_dmbankdata_20260310_170501.parquet|DISP679|OrganizationTinType invalid length for non-R records, Invalid OrganizationTinType for non-R records
+mtfdm_dev2_dmbankdata_20260310_170501.parquet|DISP21132|OrganizationTinType invalid length for non-R records, Invalid OrganizationTinType for non-R records
+mtfdm_dev2_dmbankdata_20260310_170501.parquet|MFR002|OrganizationTinType invalid length for non-R records, Invalid OrganizationTinType for non-R records
+mtfdm_dev2_dmbankdata_20260310_170501.parquet|DISP79650|OrganizationTinType invalid length for non-R records, Invalid OrganizationTinType for non-R records
+mtfdm_dev2_dmbankdata_20260310_170501.parquet|DISP43673|OrganizationTinType invalid length for non-R records, Invalid OrganizationTinType for non-R records
+mtfdm_dev2_dmbankdata_20260310_170501.parquet|MFR001|OrganizationTinType invalid length for non-R records, Invalid OrganizationTinType for non-R records
+mtfdm_dev2_dmbankdata_20260310_170501.parquet|PC77195|OrganizationTinType invalid length for non-R records, Invalid OrganizationTinType for non-R records
+mtfdm_dev2_dmbankdata_20260310_170501.parquet|MFR003|OrganizationTinType invalid length for non-R records, Invalid OrganizationTinType for non-R records
+mtfdm_dev2_dmbankdata_20260310_170501.parquet|MFR601328|OrganizationTinType invalid length for non-R records, Invalid OrganizationTinType for non-R records

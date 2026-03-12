@@ -1,6 +1,6 @@
 import os
 import subprocess
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import boto3
 import pandas as pd
 import pyarrow.parquet as pq
@@ -84,7 +84,7 @@ def check_credential_expiry(buffer_minutes: int = 10):
     if not expiry_time:
         return False
     
-    time_remaining = (expiry_time - datetime.now()).total_seconds() / 60
+    time_remaining = (expiry_time - datetime.now(timezone.utc)).total_seconds() / 60
     
     if time_remaining < buffer_minutes:
         print(f"\n⏰ ALERT: AWS credentials expiring in {time_remaining:.1f} minutes!")

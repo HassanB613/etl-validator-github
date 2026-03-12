@@ -1,0 +1,76 @@
+Glue Job Output Logs - Run ID: jr_b4921620de5906b6c72792ab91ece195545c775af522bc017f6c78002988a99b
+Job Name: load-bank-file-stg-dev2
+================================================================================
+
+jr_b4921620de5906b6c72792ab91ece195545c775af522bc017f6c78002988a99b
+
+Stored procedure executed successfully.
+
+DEBUG: valid_paths = ['s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_151312.parquet']
+
+S3 access OK for: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_151312.parquet
+Reading single parquet file: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_151312.parquet
+
+['RecordOperation', 'OrganizationCode', 'PayeeID', 'OrganizationIdentifier', 'OrganizationName', 'OrganizationLegalName', 'OrganizationTIN', 'OrganizationTINType', 'ProfitNonprofit', 'OrganizationNPI', 'PaymentMode', 'RoutingTransitNumber', 'AccountNumber', 'AccountType', 'EffectiveStartDate', 'EffectiveEndDate', 'AddressCode', 'AddressLine1', 'AddressLine2', 'CityName', 'State', 'PostalCode', 'ContactCode', 'ContactFirstName', 'ContactLastName', 'ContactTitle', 'ContactPhone', 'ContactFax', 'ContactOtherPhone', 'ContactEmail']
+
+root
+ |-- RecordOperation: string (nullable = true)
+ |-- OrganizationCode: string (nullable = true)
+ |-- PayeeID: string (nullable = true)
+ |-- OrganizationIdentifier: string (nullable = true)
+ |-- OrganizationName: string (nullable = true)
+ |-- OrganizationLegalName: string (nullable = true)
+ |-- OrganizationTin: string (nullable = true)
+ |-- OrganizationTinType: string (nullable = true)
+ |-- ProfitNonprofit: string (nullable = true)
+ |-- OrganizationNpi: string (nullable = true)
+ |-- PaymentMode: string (nullable = true)
+ |-- RoutingTransitNumber: string (nullable = true)
+ |-- AccountNumber: string (nullable = true)
+ |-- AccountType: string (nullable = true)
+ |-- EffectiveStartDate: string (nullable = true)
+ |-- EffectiveEndDate: string (nullable = true)
+ |-- AddressCode: string (nullable = true)
+ |-- AddressLine1: string (nullable = true)
+ |-- AddressLine2: string (nullable = true)
+ |-- CityName: string (nullable = true)
+ |-- State: string (nullable = true)
+ |-- PostalCode: string (nullable = true)
+ |-- Co
+ntactCode: string (nullable = true)
+ |-- ContactFirstName: string (nullable = true)
+ |-- ContactLastName: string (nullable = true)
+ |-- ContactTitle: string (nullable = true)
+ |-- ContactPhone: string (nullable = true)
+ |-- ContactFax: string (nullable = true)
+ |-- ContactOtherPhone: string (nullable = true)
+ |-- ContactEmail: string (nullable = true)
+ |-- INS_DT: string (nullable = false)
+ |-- MODIFIED_BY: string (nullable = false)
+ |-- INS_BATCH_ID: integer (nullable = false)
+ |-- LAST_BATCH_ID: integer (nullable = false)
+
+
+Valid records: 0
+Error records: 10
+
+Updated Valid records: 0
+Updated Error records: 10
+
+Error data written to: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/tempfolder
+
+Renamed and copied to: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/error/mtfdm_dev2_DMBankErrorfile_20260310_151512.csv
+
+Deleted temporary folder: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/tempfolder/
+
+Success,mtfdm_dev2_dmbankdata_20260310_151312.parquet,10, 0,10,None
+
+Job Metadata Updated!!
+
+Moved: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/mtfdm_dev2_dmbankdata_20260310_151312.parquet to s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/archive/2026/03/mtfdm_dev2_dmbankdata_20260310_151312.parquet
+
+Moved Parquet file to archive.
+
+Success notification email sent successfully
+
+Running autoDebugger shutdown hook.

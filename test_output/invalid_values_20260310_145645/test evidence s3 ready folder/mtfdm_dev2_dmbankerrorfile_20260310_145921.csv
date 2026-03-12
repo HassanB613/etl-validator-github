@@ -1,0 +1,11 @@
+FILENAME|PayeeId|ERROR_DESC
+mtfdm_dev2_dmbankdata_20260310_145645.parquet|DISP43597|For OrgCode R, all banking/address fields must be completely blank
+mtfdm_dev2_dmbankdata_20260310_145645.parquet|MFR002|RoutingTransitNumber must be 9 digits, RoutingTransitNumber should be numeric for M, D and P records with payment type as EFT.
+mtfdm_dev2_dmbankdata_20260310_145645.parquet|MFR003|RoutingTransitNumber must be 9 digits, RoutingTransitNumber should be numeric for M, D and P records with payment type as EFT.
+mtfdm_dev2_dmbankdata_20260310_145645.parquet|DISP96865|For PaymentMode CHK, RoutingTransitNumber must be blank
+mtfdm_dev2_dmbankdata_20260310_145645.parquet|MFR001|RoutingTransitNumber must be 9 digits, RoutingTransitNumber should be numeric for M, D and P records with payment type as EFT.
+mtfdm_dev2_dmbankdata_20260310_145645.parquet|PC28575|For PaymentMode CHK, RoutingTransitNumber must be blank
+mtfdm_dev2_dmbankdata_20260310_145645.parquet|MFR93829|RoutingTransitNumber must be 9 digits, RoutingTransitNumber should be numeric for M, D and P records with payment type as EFT.
+mtfdm_dev2_dmbankdata_20260310_145645.parquet|PC15782|RoutingTransitNumber must be 9 digits, RoutingTransitNumber should be numeric for M, D and P records with payment type as EFT.
+mtfdm_dev2_dmbankdata_20260310_145645.parquet|DISP24|For PaymentMode CHK, RoutingTransitNumber must be blank
+mtfdm_dev2_dmbankdata_20260310_145645.parquet|DISP71541|RoutingTransitNumber must be 9 digits, RoutingTransitNumber should be numeric for M, D and P records with payment type as EFT.
