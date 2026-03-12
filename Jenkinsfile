@@ -35,9 +35,17 @@ spec:
         allure 'allure'
     }
 
+    parameters {
+        string(name: 'CHECKPOINT_ID', defaultValue: '', description: 'Checkpoint ID used to resume paused test runs')
+        string(name: 'RESUME_COUNT', defaultValue: '0', description: 'Internal counter for checkpoint auto-resume attempts')
+    }
+
     environment {
         AWS_DEFAULT_REGION = "us-east-1"
         TARGET_ROLE = "arn:aws:iam::448049811908:role/mtfpm-test-automation-execution-role"
+        CHECKPOINT_TRIGGERED = "false"
+        NEXT_CHECKPOINT_ID = ""
+        MAX_RESUME_COUNT = "6"
     }
     
     stages {
@@ -129,16 +137,37 @@ EOF
                         # Create allure-results directory with proper permissions
                         mkdir -p ${WORKSPACE}/allure-results
                         chmod 777 ${WORKSPACE}/allure-results
+
+                        # Propagate checkpoint ID into pytest process when resuming
+                        if [ -n "${CHECKPOINT_ID}" ]; then
+                            export CHECKPOINT_ID="${CHECKPOINT_ID}"
+                            echo "Resuming from CHECKPOINT_ID=${CHECKPOINT_ID}"
+                        fi
                         
                         # Run pytest with Allure results
                         python3 -m pytest tests/ \
                             --alluredir=${WORKSPACE}/allure-results \
                             -v \
-                            --tb=short || EXIT_CODE=$?
+                            --tb=short > ${WORKSPACE}/pytest-output.log 2>&1 || EXIT_CODE=$?
+
+                        # Print pytest output back into Jenkins console
+                        cat ${WORKSPACE}/pytest-output.log
                         
                         # Handle exit codes
                         if [ -z "$EXIT_CODE" ]; then
                             EXIT_CODE=0
+                        fi
+
+                        # Detect checkpoint exit and extract checkpoint id
+                        CHECKPOINT_HIT=false
+                        CHECKPOINT_ID_FOUND=""
+                        if grep -q "45-minute checkpoint reached" ${WORKSPACE}/pytest-output.log; then
+                            CHECKPOINT_HIT=true
+                            CHECKPOINT_ID_FOUND=$(sed -n 's/.*Saved checkpoint \([A-Za-z0-9_-]*\) with.*/\1/p' ${WORKSPACE}/pytest-output.log | tail -1)
+                        fi
+                        echo "$CHECKPOINT_HIT" > ${WORKSPACE}/checkpoint_triggered.txt
+                        if [ -n "$CHECKPOINT_ID_FOUND" ]; then
+                            echo "$CHECKPOINT_ID_FOUND" > ${WORKSPACE}/checkpoint_id.txt
                         fi
                         
                         # Fix permissions on allure results for jenkins user
@@ -146,11 +175,71 @@ EOF
                         
                         exit $EXIT_CODE
                     '''
+
+                    script {
+                        def checkpointTriggered = fileExists("${env.WORKSPACE}/checkpoint_triggered.txt") &&
+                            readFile("${env.WORKSPACE}/checkpoint_triggered.txt").trim() == 'true'
+                        env.CHECKPOINT_TRIGGERED = checkpointTriggered ? 'true' : 'false'
+
+                        if (checkpointTriggered) {
+                            def checkpointId = ""
+                            if (fileExists("${env.WORKSPACE}/checkpoint_id.txt")) {
+                                checkpointId = readFile("${env.WORKSPACE}/checkpoint_id.txt").trim()
+                            }
+                            if (!checkpointId?.trim()) {
+                                checkpointId = params.CHECKPOINT_ID?.trim()
+                            }
+                            env.NEXT_CHECKPOINT_ID = checkpointId ?: ''
+                            currentBuild.description = "Checkpoint pause: ${env.NEXT_CHECKPOINT_ID} | resume ${params.RESUME_COUNT ?: '0'}/${env.MAX_RESUME_COUNT}"
+                            echo "Checkpoint pause detected. Next run will resume with CHECKPOINT_ID=${env.NEXT_CHECKPOINT_ID}"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Queue Resume Run') {
+            when {
+                expression { env.CHECKPOINT_TRIGGERED == 'true' }
+            }
+            steps {
+                script {
+                    if (!env.NEXT_CHECKPOINT_ID?.trim()) {
+                        error("Checkpoint pause detected but no CHECKPOINT_ID was found. Cannot queue resume run.")
+                    }
+
+                    int currentResumeCount = 0
+                    try {
+                        currentResumeCount = (params.RESUME_COUNT ?: '0').toInteger()
+                    } catch (Exception ignored) {
+                        currentResumeCount = 0
+                    }
+
+                    int maxResumeCount = env.MAX_RESUME_COUNT.toInteger()
+                    if (currentResumeCount >= maxResumeCount) {
+                        error("Max checkpoint auto-resume count reached (${currentResumeCount}/${maxResumeCount}). Stopping to prevent endless loop.")
+                    }
+
+                    int nextResumeCount = currentResumeCount + 1
+                    currentBuild.description = "Checkpoint queued: ${env.NEXT_CHECKPOINT_ID} | next ${nextResumeCount}/${maxResumeCount}"
+
+                    echo "Queuing resume build with CHECKPOINT_ID=${env.NEXT_CHECKPOINT_ID} (resume ${nextResumeCount}/${maxResumeCount})"
+                    build(
+                        job: env.JOB_NAME,
+                        wait: false,
+                        parameters: [
+                            string(name: 'CHECKPOINT_ID', value: env.NEXT_CHECKPOINT_ID),
+                            string(name: 'RESUME_COUNT', value: nextResumeCount.toString())
+                        ]
+                    )
                 }
             }
         }
         
         stage('SQL Test') {
+            when {
+                expression { env.CHECKPOINT_TRIGGERED != 'true' }
+            }
             steps {
                 container('python') {
                     echo 'Running SQL tests...'
@@ -222,7 +311,13 @@ PY
 
         }
         success {
-            echo 'All tests passed!'
+            script {
+                if (env.CHECKPOINT_TRIGGERED == 'true') {
+                    echo 'Checkpoint reached. Resume run queued successfully.'
+                } else {
+                    echo 'All tests passed!'
+                }
+            }
         }
         failure {
             echo 'Pipeline failed. Check logs above.'
