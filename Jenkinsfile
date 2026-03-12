@@ -56,15 +56,14 @@ spec:
                     echo 'Assuming target execution role...'
                     sh '''
                         set -e
-                        CREDS=$(aws sts assume-role \
-                          --role-arn "$TARGET_ROLE" \
-                          --role-session-name "jenkins-${BUILD_NUMBER}" \
-                          --duration-seconds 3600)
-
-                        ACCESS_KEY=$(echo "$CREDS" | sed -n 's/.*"AccessKeyId": "\([^"]*\)".*/\1/p')
-                        SECRET_KEY=$(echo "$CREDS" | sed -n 's/.*"SecretAccessKey": "\([^"]*\)".*/\1/p')
-                        SESSION_TOKEN=$(echo "$CREDS" | sed -n 's/.*"SessionToken": "\([^"]*\)".*/\1/p')
-                        EXPIRATION=$(echo "$CREDS" | sed -n 's/.*"Expiration": "\([^"]*\)".*/\1/p')
+                                                read ACCESS_KEY SECRET_KEY SESSION_TOKEN EXPIRATION <<EOF
+$(aws sts assume-role \
+    --role-arn "$TARGET_ROLE" \
+    --role-session-name "jenkins-${BUILD_NUMBER}" \
+    --duration-seconds 3600 \
+    --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken,Expiration]' \
+    --output text)
+EOF
 
                         cat > ${WORKSPACE}/.aws-env-vars.sh <<EOF
 export AWS_ACCESS_KEY_ID=$ACCESS_KEY
