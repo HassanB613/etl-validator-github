@@ -10,13 +10,16 @@ spec:
   containers:
   - name: python
     image: python:3.9
-    command: ["/bin/sh", "-c"]
-    args: ["cat"]
-    tty: true
-    resources:
-      limits:
-        cpu: 500m
-        memory: 1Gi
+        command: ["/bin/sh", "-c"]
+        args: ["cat"]
+        tty: true
+        resources:
+            limits:
+                cpu: 2000m
+                memory: 2Gi
+            requests:
+                cpu: 1000m
+                memory: 1Gi
   - name: awscli
     image: amazon/aws-cli:latest
     command: ["cat"]
