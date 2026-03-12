@@ -163,7 +163,7 @@ EOF
                         CHECKPOINT_ID_FOUND=""
                         if grep -q "45-minute checkpoint reached" ${WORKSPACE}/pytest-output.log; then
                             CHECKPOINT_HIT=true
-                            CHECKPOINT_ID_FOUND=$(sed -n 's/.*Saved checkpoint \([A-Za-z0-9_-]*\) with.*/\1/p' ${WORKSPACE}/pytest-output.log | tail -1)
+                            CHECKPOINT_ID_FOUND=$(grep -oE 'Saved checkpoint [A-Za-z0-9_-]+' ${WORKSPACE}/pytest-output.log | awk '{print $3}' | tail -1)
                         fi
                         echo "$CHECKPOINT_HIT" > ${WORKSPACE}/checkpoint_triggered.txt
                         if [ -n "$CHECKPOINT_ID_FOUND" ]; then

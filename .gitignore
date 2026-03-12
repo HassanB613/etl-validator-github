@@ -1,0 +1,12 @@
+# Generated test artifacts
+/test_output/
+
+# Python cache/artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Office temp files
+~$*.xlsx
