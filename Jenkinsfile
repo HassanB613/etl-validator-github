@@ -37,6 +37,7 @@ spec:
 
     environment {
         AWS_DEFAULT_REGION = "us-east-1"
+        TARGET_ROLE = "arn:aws:iam::448049811908:role/mtfpm-test-automation-execution-role"
     }
     
     stages {
@@ -45,6 +46,38 @@ spec:
                 container('awscli') {
                     echo 'Verifying AWS identity (using pod service account via IRSA)...'
                     sh 'aws sts get-caller-identity'
+                }
+            }
+        }
+
+        stage('Assume Target Role') {
+            steps {
+                container('awscli') {
+                    echo 'Assuming target execution role...'
+                    sh '''
+                        set -e
+                        CREDS=$(aws sts assume-role \
+                          --role-arn "$TARGET_ROLE" \
+                          --role-session-name "jenkins-${BUILD_NUMBER}" \
+                          --duration-seconds 3600)
+
+                        ACCESS_KEY=$(echo "$CREDS" | sed -n 's/.*"AccessKeyId": "\([^"]*\)".*/\1/p')
+                        SECRET_KEY=$(echo "$CREDS" | sed -n 's/.*"SecretAccessKey": "\([^"]*\)".*/\1/p')
+                        SESSION_TOKEN=$(echo "$CREDS" | sed -n 's/.*"SessionToken": "\([^"]*\)".*/\1/p')
+                        EXPIRATION=$(echo "$CREDS" | sed -n 's/.*"Expiration": "\([^"]*\)".*/\1/p')
+
+                        cat > ${WORKSPACE}/.aws-env-vars.sh <<EOF
+export AWS_ACCESS_KEY_ID=$ACCESS_KEY
+export AWS_SECRET_ACCESS_KEY=$SECRET_KEY
+export AWS_SESSION_TOKEN=$SESSION_TOKEN
+export AWS_CREDENTIAL_EXPIRY=$EXPIRATION
+export AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION
+EOF
+
+                        chmod 600 ${WORKSPACE}/.aws-env-vars.sh
+                        . ${WORKSPACE}/.aws-env-vars.sh
+                        aws sts get-caller-identity
+                    '''
                 }
             }
         }
@@ -62,8 +95,10 @@ spec:
         stage('Verify AWS Access') {
             steps {
                 container('awscli') {
-                    echo 'Verifying S3 access using pod IRSA credentials...'
+                    echo 'Verifying S3 access using assumed target role credentials...'
                     sh '''
+                        . ${WORKSPACE}/.aws-env-vars.sh
+
                         echo "=== Current AWS Identity ==="
                         aws sts get-caller-identity
 
@@ -83,6 +118,8 @@ spec:
                 container('python') {
                     echo 'Running tests with Allure reporting...'
                     sh '''
+                        . ${WORKSPACE}/.aws-env-vars.sh
+
                         # Install ODBC drivers (required for pyodbc/database validation)
                         apt-get update && apt-get install -y curl apt-transport-https gnupg
                         curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg
@@ -119,6 +156,8 @@ spec:
                 container('python') {
                     echo 'Running SQL tests...'
                     sh '''
+                        . ${WORKSPACE}/.aws-env-vars.sh
+
                         # Skip ODBC install if already installed from Test stage
                         if command -v odbcinst > /dev/null 2>&1; then
                             echo "ODBC drivers already installed, skipping installation"
