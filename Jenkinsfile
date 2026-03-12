@@ -9,26 +9,26 @@ spec:
     restartPolicy: Never
     containers:
         - name: python
-            image: "python:3.9"
-            command: ["/bin/sh", "-c"]
-            args: ["cat"]
-            tty: true
-            resources:
-                limits:
-                    cpu: "2000m"
-                    memory: "2Gi"
-                requests:
-                    cpu: "1000m"
-                    memory: "1Gi"
+          image: "python:3.9"
+          command: ["/bin/sh", "-c"]
+          args: ["cat"]
+          tty: true
+          resources:
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+            requests:
+              cpu: "1000m"
+              memory: "1Gi"
         - name: awscli
-            image: "amazon/aws-cli:latest"
-            command: ["cat"]
-            tty: true
+          image: "amazon/aws-cli:latest"
+          command: ["cat"]
+          tty: true
         - name: java
-            image: "eclipse-temurin:17-jre"
-            command: ["/bin/sh", "-c"]
-            args: ["cat"]
-            tty: true
+          image: "eclipse-temurin:17-jre"
+          command: ["/bin/sh", "-c"]
+          args: ["cat"]
+          tty: true
 '''
         }
     }
