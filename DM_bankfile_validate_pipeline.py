@@ -427,6 +427,58 @@ def get_csv_data_row_count(local_path):
         print(f"⚠️ Could not count CSV rows from file lines: {e}")
         return 0
 
+def find_unexpected_error_parquet_files(prefix, min_modified_epoch=None):
+    """
+    Find unexpected parquet files in the error folder.
+
+    Args:
+        prefix: S3 prefix to inspect (typically ERROR_CSV_PREFIX)
+        min_modified_epoch: Optional lower-bound epoch filter for LastModified
+
+    Returns:
+        List of parquet object keys considered part of the current test window.
+    """
+    unexpected_keys = []
+    try:
+        result = s3.list_objects_v2(Bucket=BUCKET, Prefix=prefix)
+        contents = result.get("Contents", [])
+
+        for obj in contents:
+            key = obj.get("Key", "")
+            if not key.lower().endswith(".parquet"):
+                continue
+
+            if min_modified_epoch is not None:
+                try:
+                    modified_epoch = obj["LastModified"].timestamp()
+                except Exception:
+                    continue
+                if modified_epoch < min_modified_epoch:
+                    continue
+
+            unexpected_keys.append(key)
+    except Exception as e:
+        print(f"⚠️ Failed to scan for unexpected parquet files in error folder: {e}")
+
+    return unexpected_keys
+
+def attach_unexpected_parquet_to_allure(unexpected_keys, context_label):
+    """
+    Attach unexpected parquet keys to Allure report for debugging.
+    """
+    if not unexpected_keys or not ALLURE_AVAILABLE:
+        return
+
+    details = [
+        "Unexpected parquet file(s) detected in error folder (expected CSV):",
+        *[f"- {key}" for key in unexpected_keys],
+    ]
+    allure.attach(
+        "\n".join(details),
+        name=f"Unexpected Error Folder Parquet Files - {context_label}",
+        attachment_type=allure.attachment_type.TEXT,
+    )
+
 def download_latest_error_csv_from_s3(local_evidence_dir):
     """
     Download the latest error CSV file from S3 error folder by LastModified date.
@@ -531,6 +583,7 @@ def validate_error_file_with_database(glue_run_id, local_evidence_dir, run_start
         "db_error_count": None,
         "csv_error_count": None,
         "csv_file": None,
+        "unexpected_parquet_files": [],
         "match": False
     }
     
@@ -569,6 +622,18 @@ def validate_error_file_with_database(glue_run_id, local_evidence_dir, run_start
                 time.sleep(wait_seconds)
                 continue
             print("❌ Could not count errors in database. Validation failed.")
+            return False, details
+
+        unexpected_parquet_files = find_unexpected_error_parquet_files(
+            ERROR_CSV_PREFIX,
+            min_modified_epoch=run_start_epoch,
+        )
+        if unexpected_parquet_files:
+            details["unexpected_parquet_files"] = unexpected_parquet_files
+            attach_unexpected_parquet_to_allure(unexpected_parquet_files, "DB Validation")
+            print("❌ Unexpected parquet file(s) found in error folder (expected CSV only):")
+            for key in unexpected_parquet_files:
+                print(f"   - {key}")
             return False, details
 
         # Step 3: Download newest error CSV after run start time
@@ -1161,6 +1226,7 @@ def run_test_scenario(file_type, seed=None, rows=50):
     glue_run_id = None  # Track Glue run ID for database validation
     glue_completed_epoch = None
     ready_folder_empty_epoch = None
+    unexpected_parquet_findings = []
     try:
         print(f"\n>>> Running test for scenario: {file_type.upper()}")
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -1268,6 +1334,18 @@ def run_test_scenario(file_type, seed=None, rows=50):
         print(">>> Step 7: Validate S3 outputs (Error folder)")
         try:
             if is_valid:
+                unexpected_parquet_files = find_unexpected_error_parquet_files(
+                    ERROR_CSV_PREFIX,
+                    min_modified_epoch=upload_metadata.get("upload_started_epoch"),
+                )
+                if unexpected_parquet_files:
+                    unexpected_parquet_findings.extend(unexpected_parquet_files)
+                    attach_unexpected_parquet_to_allure(unexpected_parquet_files, "Valid Scenario Step 7")
+                assert not unexpected_parquet_files, (
+                    "❌ Unexpected parquet file(s) found in error folder for valid scenario: "
+                    f"{unexpected_parquet_files}"
+                )
+
                 # For valid scenario, check that NO error file exists for this specific timestamp
                 expected_error_file = check_expected_error_file_exists(ERROR_CSV_PREFIX, timestamp)
                 assert not expected_error_file, f"❌ Unexpected error file found for valid scenario: {expected_error_file}"
@@ -1295,7 +1373,14 @@ def run_test_scenario(file_type, seed=None, rows=50):
             if db_validation_passed:
                 step_status["Step 8"] = f"Passed (DB={db_details['db_error_count']}, CSV={db_details['csv_error_count']})"
             else:
-                step_status["Step 8"] = f"Failed: DB={db_details.get('db_error_count', 'N/A')}, CSV={db_details.get('csv_error_count', 'N/A')}"
+                if db_details.get("unexpected_parquet_files"):
+                    unexpected_parquet_findings.extend(db_details.get("unexpected_parquet_files", []))
+                    step_status["Step 8"] = (
+                        "Failed: Unexpected parquet in error folder: "
+                        f"{db_details.get('unexpected_parquet_files')}"
+                    )
+                else:
+                    step_status["Step 8"] = f"Failed: DB={db_details.get('db_error_count', 'N/A')}, CSV={db_details.get('csv_error_count', 'N/A')}"
         elif is_valid:
             step_status["Step 8"] = "Skipped (valid scenario - no errors expected)"
 
@@ -1344,6 +1429,15 @@ def run_test_scenario(file_type, seed=None, rows=50):
         
         # --- Now report to TestRail ---
         detailed_comment = f"Scenario: {file_type}\n" + "\n".join([f"{step}: {status}" for step, status in step_status.items()])
+        if unexpected_parquet_findings:
+            unique_parquet_keys = sorted(set(unexpected_parquet_findings))
+            print("\n⚠️ Unexpected parquet file(s) in error folder (expected CSV only):")
+            for key in unique_parquet_keys:
+                print(f"   - {key}")
+            detailed_comment += (
+                "\n\nUnexpected parquet file(s) in error folder (expected CSV only):\n"
+                + "\n".join([f"- {key}" for key in unique_parquet_keys])
+            )
         overall_status = 5 if any("Failed" in str(status) for status in step_status.values()) else 1
         if overall_status == 5:
             print("❌ Overall Test Result: Failed")
@@ -1924,6 +2018,7 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
     glue_run_id = None  # Track Glue run ID for database validation
     glue_completed_epoch = None
     ready_folder_empty_epoch = None
+    unexpected_parquet_findings = []
     try:
         print(f"\n>>> Running full ETL pipeline for scenario: {scenario_name}")
         print(">>> Step 3: Validate S3 outputs before triggering Glue job")
@@ -2020,7 +2115,14 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
             if db_validation_passed:
                 step_status["Step 7"] = f"Passed (DB={db_details['db_error_count']}, CSV={db_details['csv_error_count']})"
             else:
-                step_status["Step 7"] = f"Failed: DB={db_details.get('db_error_count', 'N/A')}, CSV={db_details.get('csv_error_count', 'N/A')}"
+                if db_details.get("unexpected_parquet_files"):
+                    unexpected_parquet_findings.extend(db_details.get("unexpected_parquet_files", []))
+                    step_status["Step 7"] = (
+                        "Failed: Unexpected parquet in error folder: "
+                        f"{db_details.get('unexpected_parquet_files')}"
+                    )
+                else:
+                    step_status["Step 7"] = f"Failed: DB={db_details.get('db_error_count', 'N/A')}, CSV={db_details.get('csv_error_count', 'N/A')}"
         else:
             step_status["Step 7"] = "Skipped (no Glue run ID available)"
 
@@ -2056,6 +2158,15 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
                     print(f"🗑️ Removed empty evidence directory: {evidence_dir}")
         # --- Now report to TestRail ---
         detailed_comment = f"Scenario: {file_type}\n" + "\n".join([f"{step}: {status}" for step, status in step_status.items()])
+        if unexpected_parquet_findings:
+            unique_parquet_keys = sorted(set(unexpected_parquet_findings))
+            print("\n⚠️ Unexpected parquet file(s) in error folder (expected CSV only):")
+            for key in unique_parquet_keys:
+                print(f"   - {key}")
+            detailed_comment += (
+                "\n\nUnexpected parquet file(s) in error folder (expected CSV only):\n"
+                + "\n".join([f"- {key}" for key in unique_parquet_keys])
+            )
         overall_status = 5 if any("Failed" in str(status) for status in step_status.values()) else 1
         if overall_status == 5:
             print("❌ Overall Test Result: Failed")

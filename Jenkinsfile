@@ -35,14 +35,11 @@ spec:
         allure 'allure'
     }
 
-    parameters {
-        string(name: 'CHECKPOINT_ID', defaultValue: '', description: 'Optional: existing checkpoint ID to resume (example: ff3e2f12)')
-    }
-    
     environment {
         // Only hardcode what's NOT in the Python script
         TARGET_ROLE = "arn:aws:iam::448049811908:role/mtfpm-test-automation-execution-role"
         AWS_REGION = "us-east-1"
+        ASSUME_ROLE_DURATION_SECONDS = "28800"
     }
     
     stages {
@@ -63,18 +60,35 @@ spec:
                         
                         sh '''
                         # Assume the role with S3 permissions
-                        aws sts assume-role \
+                                                set +e
+                                                aws sts assume-role \
                           --role-arn ${TARGET_ROLE} \
                           --role-session-name jenkins-test-${BUILD_NUMBER} \
+                                                    --duration-seconds ${ASSUME_ROLE_DURATION_SECONDS} \
                           --output text \
                           --query Credentials \
-                          > ${WORKSPACE}/.role-creds.txt
+                                                    > ${WORKSPACE}/.role-creds.txt 2> ${WORKSPACE}/.assume-role-error.log
+                                                ASSUME_EXIT=$?
+                                                set -e
+
+                                                if [ ${ASSUME_EXIT} -ne 0 ]; then
+                                                    echo "❌ Failed to assume role ${TARGET_ROLE} with duration ${ASSUME_ROLE_DURATION_SECONDS}s"
+                                                    echo "--- STS error details ---"
+                                                    cat ${WORKSPACE}/.assume-role-error.log || true
+                                                    echo "-------------------------"
+                                                    echo "Hint: If this says role chaining/max session duration exceeded, verify:"
+                                                    echo "  1) Jenkins principal assumes target role directly (no intermediate assume-role hop)"
+                                                    echo "  2) Target role MaxSessionDuration >= ${ASSUME_ROLE_DURATION_SECONDS}"
+                                                    echo "  3) Trust policy allows this Jenkins principal to assume the role"
+                                                    exit ${ASSUME_EXIT}
+                                                fi
                         
                         # Extract credentials
                         export AWS_ACCESS_KEY_ID=$(cut -f1 ${WORKSPACE}/.role-creds.txt)
                         export AWS_SECRET_ACCESS_KEY=$(cut -f3 ${WORKSPACE}/.role-creds.txt)
                         export AWS_SESSION_TOKEN=$(cut -f4 ${WORKSPACE}/.role-creds.txt)
                         export AWS_SESSION_EXPIRY=$(cut -f2 ${WORKSPACE}/.role-creds.txt)
+                        export AWS_CREDENTIAL_EXPIRY=${AWS_SESSION_EXPIRY}
                         
                         # Save to workspace for use in other containers
                         cat > ${WORKSPACE}/.aws-env-vars.sh <<EOF
@@ -82,6 +96,7 @@ export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
 export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
 export AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
 export AWS_SESSION_EXPIRY=${AWS_SESSION_EXPIRY}
+export AWS_CREDENTIAL_EXPIRY=${AWS_CREDENTIAL_EXPIRY}
 export AWS_DEFAULT_REGION=${AWS_REGION}
 unset AWS_WEB_IDENTITY_TOKEN_FILE
 unset AWS_ROLE_ARN
@@ -147,24 +162,12 @@ EOF
                         
                         # Source AWS credentials for Python tests
                         . ${WORKSPACE}/.aws-env-vars.sh
-
-                        # Optional resume from prior checkpoint
-                        CHECKPOINT_ID_TRIMMED=$(echo "${CHECKPOINT_ID}" | xargs)
-                        if [ -n "${CHECKPOINT_ID_TRIMMED}" ]; then
-                            export CHECKPOINT_ID=${CHECKPOINT_ID_TRIMMED}
-                            echo "Resuming from checkpoint ID: ${CHECKPOINT_ID}"
-                        else
-                            echo "Starting with auto-generated checkpoint ID"
-                        fi
-                        
-                        # Checkpoint is loaded from S3 by conftest.py automatically
                         
                         # Create allure-results directory with proper permissions
                         mkdir -p ${WORKSPACE}/allure-results
                         chmod 777 ${WORKSPACE}/allure-results
                         
                         # Run pytest with Allure results
-                        # Checkpoints will auto-skip completed tests via pytest conftest.py
                         python3 -m pytest tests/ \
                             --alluredir=${WORKSPACE}/allure-results \
                             -v \
@@ -173,13 +176,6 @@ EOF
                         # Handle exit codes
                         if [ -z "$EXIT_CODE" ]; then
                             EXIT_CODE=0
-                        fi
-                        
-                        # Exit code 1 with checkpoint saved to S3 = credential expiry
-                        # conftest.py will have saved checkpoint to S3 before exit
-                        if [ $EXIT_CODE -eq 1 ]; then
-                            echo "⚠️ Tests may have triggered checkpoint (check S3)"
-                            echo "📍 S3 Location: s3://mtfpm-dev2-s3-mtfdmstaging-us-east-1/test-checkpoints/"
                         fi
                         
                         # Fix permissions on allure results for jenkins user
@@ -214,7 +210,6 @@ EOF
                 }
             }
         }
-        // Build #161: Testing checkpoint resume with 11 passed tests from Build #160
     }
     
     post {
@@ -266,7 +261,7 @@ PY
             container('python') {
                 sh '''
                     # Cleanup sensitive files
-                    rm -f ${WORKSPACE}/.aws-env-vars.sh ${WORKSPACE}/.role-creds.txt
+                    rm -f ${WORKSPACE}/.aws-env-vars.sh ${WORKSPACE}/.role-creds.txt ${WORKSPACE}/.assume-role-error.log
                     echo "Cleaned up temporary credential files"
                 '''
             }
