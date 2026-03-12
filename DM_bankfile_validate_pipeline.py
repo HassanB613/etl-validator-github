@@ -1,6 +1,7 @@
 import os
 import subprocess
 from datetime import datetime, timedelta, timezone
+import json
 import boto3
 import pandas as pd
 import pyarrow.parquet as pq
@@ -41,6 +42,91 @@ ENV_SUFFIX = "dev2"
 s3 = boto3.client("s3")
 glue = boto3.client("glue", region_name="us-east-1")
 logs = boto3.client("logs", region_name="us-east-1")
+
+# Persistent guard state for consecutive pre-upload gate failures
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+GATE_GUARD_DIR = os.path.join(BASE_DIR, "test_output")
+GATE_GUARD_STATE_FILE = os.path.join(GATE_GUARD_DIR, "pre_upload_gate_state.json")
+GATE_GUARD_STOP_FILE = os.path.join(GATE_GUARD_DIR, "STOP_TESTING_READY_STUCK.flag")
+GATE_GUARD_THRESHOLD = 2
+
+
+def _ensure_gate_guard_dir():
+    os.makedirs(GATE_GUARD_DIR, exist_ok=True)
+
+
+def _read_gate_guard_state():
+    default_state = {
+        "consecutive_failures": 0,
+        "last_reason": "",
+        "updated_at": "",
+    }
+    try:
+        if os.path.exists(GATE_GUARD_STATE_FILE):
+            with open(GATE_GUARD_STATE_FILE, "r", encoding="utf-8") as f:
+                loaded = json.load(f)
+                if isinstance(loaded, dict):
+                    default_state.update(loaded)
+    except Exception as e:
+        print(f"⚠️ Could not read gate guard state: {e}")
+    return default_state
+
+
+def _write_gate_guard_state(state):
+    try:
+        _ensure_gate_guard_dir()
+        with open(GATE_GUARD_STATE_FILE, "w", encoding="utf-8") as f:
+            json.dump(state, f, indent=2)
+    except Exception as e:
+        print(f"⚠️ Could not write gate guard state: {e}")
+
+
+def register_pre_upload_gate_success():
+    state = {
+        "consecutive_failures": 0,
+        "last_reason": "",
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    _write_gate_guard_state(state)
+    if os.path.exists(GATE_GUARD_STOP_FILE):
+        try:
+            os.remove(GATE_GUARD_STOP_FILE)
+            print("✅ Cleared stop-testing guard flag after successful pre-upload gate check.")
+        except Exception as e:
+            print(f"⚠️ Could not clear stop-testing guard flag: {e}")
+
+
+def register_pre_upload_gate_failure(reason):
+    state = _read_gate_guard_state()
+    consecutive = int(state.get("consecutive_failures", 0)) + 1
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    state.update(
+        {
+            "consecutive_failures": consecutive,
+            "last_reason": str(reason),
+            "updated_at": now_iso,
+        }
+    )
+    _write_gate_guard_state(state)
+
+    if consecutive >= GATE_GUARD_THRESHOLD:
+        _ensure_gate_guard_dir()
+        stop_message = (
+            "Detected 2 consecutive pre-upload gate failures. "
+            "Ready folder appears stuck (Glue not clearing files). "
+            f"Last reason: {reason}"
+        )
+        try:
+            with open(GATE_GUARD_STOP_FILE, "w", encoding="utf-8") as f:
+                f.write(stop_message + "\n")
+                f.write(f"UpdatedAtUtc: {now_iso}\n")
+                f.write(f"ConsecutiveFailures: {consecutive}\n")
+            print(f"🛑 Stop-testing guard flag created: {GATE_GUARD_STOP_FILE}")
+        except Exception as e:
+            print(f"⚠️ Could not create stop-testing guard flag: {e}")
+
+    return consecutive
 
 # --------------------
 # AWS Credential Management (for long-running operations)
@@ -827,10 +913,14 @@ def upload_to_s3(file_path):
     # Wait for previous test to complete before uploading
     ready_ok, ready_reason = wait_for_ready_folder_empty_and_glue_idle(GLUE_JOB_NAME)
     if not ready_ok:
+        consecutive_failures = register_pre_upload_gate_failure(ready_reason)
         raise RuntimeError(
             f"Pre-upload gate failed: {ready_reason}. "
-            "Upload aborted to prevent mixing files across Glue runs."
+            "Upload aborted to prevent mixing files across Glue runs. "
+            f"Consecutive pre-upload gate failures: {consecutive_failures}/{GATE_GUARD_THRESHOLD}."
         )
+
+    register_pre_upload_gate_success()
 
     s3_key = f"{S3_PREFIX}/{os.path.basename(file_path)}"
     print(f"📤 Uploading {file_path} to s3://{BUCKET}/{s3_key}")

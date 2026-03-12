@@ -12,6 +12,35 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from checkpoint_manager import get_checkpoint_manager
 
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+GATE_GUARD_DIR = os.path.join(BASE_DIR, "test_output")
+GATE_GUARD_STATE_FILE = os.path.join(GATE_GUARD_DIR, "pre_upload_gate_state.json")
+GATE_GUARD_STOP_FILE = os.path.join(GATE_GUARD_DIR, "STOP_TESTING_READY_STUCK.flag")
+
+
+def _read_stop_testing_message():
+    if not os.path.exists(GATE_GUARD_STOP_FILE):
+        return None
+    try:
+        with open(GATE_GUARD_STOP_FILE, "r", encoding="utf-8") as f:
+            return f.read().strip() or "Stop-testing guard flag detected."
+    except Exception as e:
+        return f"Stop-testing guard flag detected, but could not read details: {e}"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def gate_guard_session_setup():
+    """Ensure stale stop-guard artifacts do not leak across independent pytest sessions."""
+    for path in [GATE_GUARD_STOP_FILE, GATE_GUARD_STATE_FILE]:
+        if os.path.exists(path):
+            try:
+                os.remove(path)
+                print(f"🧹 Cleared stale gate guard file: {path}")
+            except Exception as e:
+                print(f"⚠️ Could not clear stale gate guard file {path}: {e}")
+    yield
+
+
 @pytest.fixture(scope="session", autouse=True)
 def checkpoint_manager():
     """Provide checkpoint manager as a session-wide fixture."""
@@ -28,6 +57,10 @@ def checkpoint_test_handler(request, checkpoint_manager):
     """
     test_name = request.node.name
 
+    stop_message = _read_stop_testing_message()
+    if stop_message:
+        pytest.exit(f"\n🛑 {stop_message}", returncode=1)
+
     if checkpoint_manager.should_skip_test(test_name):
         pytest.skip(f"⏭️ Skipping already completed test: {test_name}")
 
@@ -42,6 +75,10 @@ def checkpoint_test_handler(request, checkpoint_manager):
 
     # Run the test
     yield
+
+    stop_message = _read_stop_testing_message()
+    if stop_message:
+        pytest.exit(f"\n🛑 {stop_message}", returncode=1)
 
     if hasattr(request.node, "rep_call") and request.node.rep_call.passed:
         checkpoint_manager.mark_test_complete(test_name)

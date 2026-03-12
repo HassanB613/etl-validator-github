@@ -306,7 +306,29 @@ PY
             }
         }
         failure {
-            echo 'Pipeline failed. Check logs above.'
+            script {
+                def readyFolderStuckDetected = false
+                if (fileExists("${env.WORKSPACE}/pytest-output.log")) {
+                    def pytestLog = readFile("${env.WORKSPACE}/pytest-output.log")
+                    readyFolderStuckDetected = (
+                        pytestLog.contains('Detected 2 consecutive pre-upload gate failures') ||
+                        pytestLog.contains('Ready folder appears stuck (Glue not clearing files)') ||
+                        pytestLog.contains('Consecutive pre-upload gate failures: 2/2')
+                    )
+                }
+
+                if (readyFolderStuckDetected) {
+                    currentBuild.description = "FAILED: Ready folder stuck (2 gate fails)"
+                    echo '============================================================'
+                    echo '🛑 CRITICAL STOP CONDITION DETECTED'
+                    echo 'Cause: 2 consecutive pre-upload gate failures.'
+                    echo 'Meaning: Glue is likely not moving files out of ready folder.'
+                    echo 'Action: Test execution was intentionally stopped to avoid noise.'
+                    echo '============================================================'
+                } else {
+                    echo 'Pipeline failed. Check logs above.'
+                }
+            }
         }
     }
 }
