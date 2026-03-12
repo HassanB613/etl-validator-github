@@ -132,7 +132,7 @@ EOF
             steps {
                 container('python') {
                     echo 'Running tests with Allure reporting...'
-                    sh '''
+                    sh '''#!/bin/bash
                         . ${WORKSPACE}/.aws-env-vars.sh
 
                         # Create allure-results directory with proper permissions
@@ -145,19 +145,13 @@ EOF
                             echo "Resuming from CHECKPOINT_ID=${CHECKPOINT_ID}"
                         fi
                         
-                        # Run pytest with Allure results
+                        # Run pytest - stream output live to console AND write to log file
                         python3 -m pytest tests/ \
                             --alluredir=${WORKSPACE}/allure-results \
                             -v \
-                            --tb=short > ${WORKSPACE}/pytest-output.log 2>&1 || EXIT_CODE=$?
+                            --tb=short 2>&1 | tee ${WORKSPACE}/pytest-output.log
+                        EXIT_CODE=${PIPESTATUS[0]}
 
-                        # Print pytest output back into Jenkins console
-                        cat ${WORKSPACE}/pytest-output.log
-                        
-                        # Handle exit codes
-                        if [ -z "$EXIT_CODE" ]; then
-                            EXIT_CODE=0
-                        fi
 
                         # Detect checkpoint exit and extract checkpoint id
                         CHECKPOINT_HIT=false
