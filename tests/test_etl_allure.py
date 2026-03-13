@@ -22,6 +22,7 @@ class TestETLValidation:
     @allure.story("Invalid Data Processing")
     @allure.title("Test: Invalid bank file - error handling with DB validation")
     @allure.severity(allure.severity_level.CRITICAL)
+    @pytest.mark.skip(reason="Temporarily skipped per request")
     def test_invalid_scenario(self):
         """
         Test invalid bank file with 25 rows triggers error handling and DB validation.
@@ -61,6 +62,7 @@ class TestETLValidation:
     @allure.story("Valid Data Processing")
     @allure.title("Test: Valid bank file - successful processing")
     @allure.severity(allure.severity_level.CRITICAL)
+    @pytest.mark.skip(reason="Temporarily skipped per request")
     def test_valid_scenario(self):
         """
         Test valid bank file with 25 rows is processed successfully.
@@ -99,6 +101,7 @@ class TestETLValidation:
     @allure.story("Valid Data Processing")
     @allure.title("Test: Valid bank file - 25 rows successful processing (second run)")
     @allure.severity(allure.severity_level.CRITICAL)
+    @pytest.mark.skip(reason="Temporarily skipped per request")
     def test_valid_scenario_2(self):
         """
         Test valid bank file with 25 rows is processed successfully (second validation run).

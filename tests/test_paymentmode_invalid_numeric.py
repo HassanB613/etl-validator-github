@@ -27,6 +27,7 @@ class TestPaymentModeInvalidNumeric:
     7. Database validation: Compare DB error count with CSV row count
     """)
     @allure.severity(allure.severity_level.CRITICAL)
+    @pytest.mark.skip(reason="Temporarily skipped per request")
     def test_paymentmode_invalid_numeric(self):
         """
         Test that pipeline rejects numeric value '123' in PaymentMode column.

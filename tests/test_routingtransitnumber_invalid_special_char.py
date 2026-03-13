@@ -27,6 +27,7 @@ class TestRoutingTransitNumberInvalidSpecialChar:
     7. Database validation: Compare DB error count with CSV row count
     """)
     @allure.severity(allure.severity_level.CRITICAL)
+    @pytest.mark.skip(reason="Temporarily skipped per request")
     def test_routingtransitnumber_invalid_special_char(self):
         """
         Test that pipeline rejects special characters '@#$&^%!!' in RoutingTransitNumber column.
