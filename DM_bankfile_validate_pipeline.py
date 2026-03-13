@@ -1501,8 +1501,22 @@ def run_test_scenario(file_type, seed=None, rows=50):
                     run_window_seconds=180,
                     wait_after_ready_seconds=120,
                 )
+                csv_name = os.path.basename(db_details.get("csv_file")) if db_details.get("csv_file") else "N/A"
+                if ALLURE_AVAILABLE:
+                    allure.attach(
+                        (
+                            f"DB Error Count: {db_details.get('db_error_count', 'N/A')}\n"
+                            f"CSV Error Count: {db_details.get('csv_error_count', 'N/A')}\n"
+                            f"Error File: {csv_name}"
+                        ),
+                        name="Step 8 - Error File Validation",
+                        attachment_type=allure.attachment_type.TEXT,
+                    )
                 if db_validation_passed:
-                    step_status["Step 8"] = f"Passed (DB={db_details['db_error_count']}, CSV={db_details['csv_error_count']})"
+                    step_status["Step 8"] = (
+                        f"Passed (DB={db_details['db_error_count']}, CSV={db_details['csv_error_count']}, "
+                        f"ErrorFile={csv_name})"
+                    )
                 else:
                     if db_details.get("unexpected_parquet_files"):
                         unexpected_parquet_findings.extend(db_details.get("unexpected_parquet_files", []))
@@ -1511,7 +1525,11 @@ def run_test_scenario(file_type, seed=None, rows=50):
                             f"{db_details.get('unexpected_parquet_files')}"
                         )
                     else:
-                        step_status["Step 8"] = f"Failed: DB={db_details.get('db_error_count', 'N/A')}, CSV={db_details.get('csv_error_count', 'N/A')}"
+                        step_status["Step 8"] = (
+                            f"Failed: DB={db_details.get('db_error_count', 'N/A')}, "
+                            f"CSV={db_details.get('csv_error_count', 'N/A')}, "
+                            f"ErrorFile={csv_name}"
+                        )
         elif is_valid:
             step_status["Step 8"] = "Skipped (valid scenario - no errors expected)"
 
@@ -2259,8 +2277,22 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
                 run_window_seconds=180,
                 wait_after_ready_seconds=120,
             )
+            csv_name = os.path.basename(db_details.get("csv_file")) if db_details.get("csv_file") else "N/A"
+            if ALLURE_AVAILABLE:
+                allure.attach(
+                    (
+                        f"DB Error Count: {db_details.get('db_error_count', 'N/A')}\n"
+                        f"CSV Error Count: {db_details.get('csv_error_count', 'N/A')}\n"
+                        f"Error File: {csv_name}"
+                    ),
+                    name="Step 7 - Error File Validation",
+                    attachment_type=allure.attachment_type.TEXT,
+                )
             if db_validation_passed:
-                step_status["Step 7"] = f"Passed (DB={db_details['db_error_count']}, CSV={db_details['csv_error_count']})"
+                step_status["Step 7"] = (
+                    f"Passed (DB={db_details['db_error_count']}, CSV={db_details['csv_error_count']}, "
+                    f"ErrorFile={csv_name})"
+                )
             else:
                 if db_details.get("unexpected_parquet_files"):
                     unexpected_parquet_findings.extend(db_details.get("unexpected_parquet_files", []))
@@ -2269,7 +2301,11 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
                         f"{db_details.get('unexpected_parquet_files')}"
                     )
                 else:
-                    step_status["Step 7"] = f"Failed: DB={db_details.get('db_error_count', 'N/A')}, CSV={db_details.get('csv_error_count', 'N/A')}"
+                    step_status["Step 7"] = (
+                        f"Failed: DB={db_details.get('db_error_count', 'N/A')}, "
+                        f"CSV={db_details.get('csv_error_count', 'N/A')}, "
+                        f"ErrorFile={csv_name}"
+                    )
         else:
             step_status["Step 7"] = "Skipped (no Glue run ID available)"
 
