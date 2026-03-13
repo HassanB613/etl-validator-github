@@ -201,7 +201,12 @@ EOF
                         CHECKPOINT_ID_FOUND=""
                         if grep -q "45-minute checkpoint reached" ${WORKSPACE}/pytest-output.log; then
                             CHECKPOINT_HIT=true
-                            CHECKPOINT_ID_FOUND=$(grep -oE 'Saved checkpoint [A-Za-z0-9_-]+' ${WORKSPACE}/pytest-output.log | awk '{print $3}' | tail -1)
+                            # Primary: dedicated marker line printed by conftest.py
+                            CHECKPOINT_ID_FOUND=$(grep -oE 'JENKINS_CHECKPOINT_ID=[A-Za-z0-9_-]+' ${WORKSPACE}/pytest-output.log | cut -d= -f2 | tail -1)
+                            # Fallback: legacy pattern from pytest.exit() message
+                            if [ -z "$CHECKPOINT_ID_FOUND" ]; then
+                                CHECKPOINT_ID_FOUND=$(grep -oE 'Saved checkpoint [A-Za-z0-9_-]+' ${WORKSPACE}/pytest-output.log | awk '{print $3}' | tail -1)
+                            fi
                         fi
                         echo "$CHECKPOINT_HIT" > ${WORKSPACE}/checkpoint_triggered.txt
                         if [ -n "$CHECKPOINT_ID_FOUND" ]; then
@@ -227,7 +232,10 @@ EOF
                             if (!checkpointId?.trim()) {
                                 checkpointId = params.CHECKPOINT_ID?.trim()
                             }
-                            env.NEXT_CHECKPOINT_ID = checkpointId ?: ''
+                            if (!checkpointId?.trim()) {
+                                error("45-minute checkpoint was reached but no checkpoint ID could be extracted from pytest-output.log. Check for JENKINS_CHECKPOINT_ID= marker in the log.")
+                            }
+                            env.NEXT_CHECKPOINT_ID = checkpointId.trim()
                             currentBuild.description = "Checkpoint pause: ${env.NEXT_CHECKPOINT_ID} | resume ${params.RESUME_COUNT ?: '0'}/${env.MAX_RESUME_COUNT}"
                             echo "Checkpoint pause detected. Next run will resume with CHECKPOINT_ID=${env.NEXT_CHECKPOINT_ID}"
                         }

@@ -66,6 +66,8 @@ def checkpoint_test_handler(request, checkpoint_manager):
 
     if checkpoint_manager.should_checkpoint():
         checkpoint_summary = checkpoint_manager.trigger_45min_checkpoint()
+        # Print a dedicated marker line that the Jenkinsfile grep can reliably extract
+        print(f"JENKINS_CHECKPOINT_ID={checkpoint_summary['checkpoint_id']}", flush=True)
         pytest.exit(
             f"\n⏰ 45-minute checkpoint reached. "
             f"Saved checkpoint {checkpoint_summary['checkpoint_id']} with "
