@@ -49,7 +49,8 @@ class TestOrganizationNPIMixedChars:
             sys.executable, pipeline_path,
             "--invalid-values", "OrganizationNPI:XxXyYyZzZ",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_organizationnpi_invalid_mixed_chars"
         ]
         
         with allure.step("Inject mixed characters (XxXyYyZzZ) into OrganizationNPI column"):

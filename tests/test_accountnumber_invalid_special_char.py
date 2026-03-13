@@ -49,7 +49,8 @@ class TestAccountNumberInvalidSpecialChar:
             sys.executable, pipeline_path,
             "--invalid-values", "AccountNumber:!!@@$$&&",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_accountnumber_invalid_special_char"
         ]
         
         with allure.step("Inject special characters '!!@@$$&&' into AccountNumber column"):

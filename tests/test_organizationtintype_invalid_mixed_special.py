@@ -50,7 +50,8 @@ class TestOrganizationTINTypeMixedSpecial:
             "--invalid-values", "OrganizationTINType:@#$!!!",
 
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_organizationtintype_invalid_mixed_special"
         ]
         
         with allure.step("Inject special characters (@#$!!!) into OrganizationTINType column"):

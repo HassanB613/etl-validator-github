@@ -50,7 +50,8 @@ class TestPaymentModeInvalidNumeric:
             sys.executable, pipeline_path,
             "--invalid-values", "PaymentMode:123",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_paymentmode_invalid_numeric"
         ]
         
         with allure.step("Inject numeric value '123' into PaymentMode column"):

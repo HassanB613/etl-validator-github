@@ -49,7 +49,8 @@ class TestEffectiveEndDateInvalidFormat:
             sys.executable, pipeline_path,
             "--invalid-values", "EffectiveEndDate:2026/03/03",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_effectiveenddate_invalid_format"
         ]
         
         with allure.step("Inject invalid date format '2026/03/03' into EffectiveEndDate column"):

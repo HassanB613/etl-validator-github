@@ -51,7 +51,8 @@ class TestEffectiveStartDateBlank:
             sys.executable, pipeline_path,
             "--invalid-values", "EffectiveStartDate:",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_effectivestartdate_blank"
         ]
         
         with allure.step("Inject blank value into EffectiveStartDate column"):

@@ -49,7 +49,8 @@ class TestAccountNumberInvalidSingleDigit:
             sys.executable, pipeline_path,
             "--invalid-values", "AccountNumber:8",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_accountnumber_invalid_single_digit"
         ]
         
         with allure.step("Inject too short value '8' into AccountNumber column"):

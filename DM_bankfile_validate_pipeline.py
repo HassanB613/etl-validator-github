@@ -2376,7 +2376,7 @@ def run_invalid_mfr_ein_ssn_scenario(flag_value, rows=50, formats=["csv"], seed=
         upload_metadata=upload_metadata,
     )
 
-def run_invalid_values_scenario(invalid_values, rows=50, formats=["csv"], seed=None, extra_args=None, timestamp=None):
+def run_invalid_values_scenario(invalid_values, rows=50, formats=["csv"], seed=None, extra_args=None, timestamp=None, scenario_name=None):
     """
     Generate test file, inject invalid values into columns, upload, and run full ETL validation.
     """
@@ -2435,7 +2435,7 @@ def run_invalid_values_scenario(invalid_values, rows=50, formats=["csv"], seed=N
     upload_metadata = upload_to_s3(parquet_path)
     return run_full_etl_pipeline_with_existing_file(
         parquet_path,
-        scenario_name="invalid_values",
+        scenario_name=scenario_name or "invalid_values",
         timestamp=timestamp,
         upload_metadata=upload_metadata,
     )
@@ -2731,6 +2731,7 @@ def main():
     parser.add_argument("--drop-rows", nargs="+", type=int, help="Indices of rows to drop for missing row scenario")
     parser.add_argument("--run-all-row-validation", action="store_true", help="Run all row validation scenarios in sequence")
     parser.add_argument("--dev2", action="store_true", help="Use Dev2 environment (bucket2/glue2)")
+    parser.add_argument("--test-name", type=str, dest="test_name", default=None, help="Test name for TestRail reporting (e.g. test_payeeid_invalid_xcd555)")
     # add CLI flag for duplicate PayeeID scenario
     parser.add_argument("--duplicate-payee-id", action="store_true", help="Duplicate a PayeeID across two rows")
     parser.add_argument("--min-max-limits", nargs='+', help="Test min/max limits: Column:Min:Max [Column2:Min:Max ...]")
@@ -2829,7 +2830,8 @@ def main():
             formats=args.formats,
             seed=args.seed,
             extra_args=extra,
-            timestamp=datetime.now().strftime("%Y%m%d_%H%M%S")
+            timestamp=datetime.now().strftime("%Y%m%d_%H%M%S"),
+            scenario_name=args.test_name,
         )
         return
     elif args.extra_columns:

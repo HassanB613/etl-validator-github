@@ -49,7 +49,8 @@ class TestOrganizationCodeValidation:
             sys.executable, pipeline_path,
             "--invalid-values", "OrganizationCode:@",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_organizationcode_invalid_special_char"
         ]
         
         with allure.step("Inject special character (@) into OrganizationCode column"):

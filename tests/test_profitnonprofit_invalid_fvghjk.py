@@ -49,7 +49,8 @@ class TestProfitNonprofitInvalidFVGHJK:
             sys.executable, pipeline_path,
             "--invalid-values", "ProfitNonprofit:FVGHJK",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_profitnonprofit_invalid_fvghjk"
         ]
         
         with allure.step("Inject invalid value FVGHJK into ProfitNonprofit column"):

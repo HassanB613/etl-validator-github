@@ -50,7 +50,8 @@ class TestRoutingTransitNumberInvalidSpecialChar:
             sys.executable, pipeline_path,
             "--invalid-values", "RoutingTransitNumber:@#$&^%!!",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_routingtransitnumber_invalid_special_char"
         ]
         
         with allure.step("Inject special characters '@#$&^%!!' into RoutingTransitNumber column"):

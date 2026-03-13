@@ -49,7 +49,8 @@ class TestOrganizationCodeInvalidH:
             sys.executable, pipeline_path,
             "--invalid-values", "OrganizationCode:H",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_organizationcode_invalid_h"
         ]
         
         with allure.step("Inject invalid value 'H' into OrganizationCode column"):

@@ -49,7 +49,8 @@ class TestAccountTypeInvalidLowercaseSavings:
             sys.executable, pipeline_path,
             "--invalid-values", "AccountType:savings",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_accounttype_invalid_lowercase_savings"
         ]
         
         with allure.step("Inject lowercase value 'savings' into AccountType column"):

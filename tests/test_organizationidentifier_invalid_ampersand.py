@@ -49,7 +49,8 @@ class TestOrganizationIdentifierAmpersand:
             sys.executable, pipeline_path,
             "--invalid-values", "OrganizationIdentifier:&&&&&&&",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_organizationidentifier_invalid_ampersand"
         ]
         
         with allure.step("Inject special characters (&&&&&&&) into OrganizationIdentifier column"):

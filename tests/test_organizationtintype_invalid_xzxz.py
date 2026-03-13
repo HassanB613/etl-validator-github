@@ -49,7 +49,8 @@ class TestOrganizationTINTypeXZXZ:
             sys.executable, pipeline_path,
             "--invalid-values", "OrganizationTINType:XZXZ",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_organizationtintype_invalid_xzxz"
         ]
         
         with allure.step("Inject invalid value XZXZ into OrganizationTINType column"):

@@ -49,7 +49,8 @@ class TestContactFirstNameInvalidNumeric:
             sys.executable, pipeline_path,
             "--invalid-values", "ContactFirstName:123456789",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_contactfirstname_invalid_numeric"
         ]
         
         with allure.step("Inject numeric value '123456789' into ContactFirstName column"):

@@ -49,7 +49,8 @@ class TestProfitNonprofitSpecialChar:
             sys.executable, pipeline_path,
             "--invalid-values", "ProfitNonprofit:@!#$&&",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_profitnonprofit_invalid_special_char"
         ]
         
         with allure.step("Inject special characters (@!#$&&) into ProfitNonprofit column"):

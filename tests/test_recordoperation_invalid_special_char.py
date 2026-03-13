@@ -49,7 +49,8 @@ class TestRecordOperationValidation:
             sys.executable, pipeline_path,
             "--invalid-values", "RecordOperation:$",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_recordoperation_invalid_special_char"
         ]
         
         with allure.step("Inject special character ($) into RecordOperation column"):

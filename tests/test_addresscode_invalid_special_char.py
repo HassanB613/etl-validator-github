@@ -49,7 +49,8 @@ class TestAddressCodeInvalidSpecialChar:
             sys.executable, pipeline_path,
             "--invalid-values", "AddressCode:@#$%!!",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_addresscode_invalid_special_char"
         ]
         
         with allure.step("Inject special characters '@#$%!!' into AddressCode column"):

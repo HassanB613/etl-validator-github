@@ -49,7 +49,8 @@ class TestOrganizationNPISingleDigit:
             sys.executable, pipeline_path,
             "--invalid-values", "OrganizationNPI:1",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_organizationnpi_invalid_single_digit"
         ]
         
         with allure.step("Inject single digit (1) into OrganizationNPI column"):

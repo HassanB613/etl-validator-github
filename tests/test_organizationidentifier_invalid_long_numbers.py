@@ -49,7 +49,8 @@ class TestOrganizationIdentifierLongNumbers:
             sys.executable, pipeline_path,
             "--invalid-values", "OrganizationIdentifier:999999999999999999",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_organizationidentifier_invalid_long_numbers"
         ]
         
         with allure.step("Inject long numbers (999999999999999999) into OrganizationIdentifier column"):

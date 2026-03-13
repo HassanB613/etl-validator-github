@@ -49,7 +49,8 @@ class TestPayeeIDInvalidXCD555:
             sys.executable, pipeline_path,
             "--invalid-values", "PayeeID:XCD555",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_payeeid_invalid_xcd555"
         ]
         
         with allure.step("Inject invalid value XCD555 into PayeeID column"):

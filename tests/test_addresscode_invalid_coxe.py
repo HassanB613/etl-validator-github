@@ -49,7 +49,8 @@ class TestAddressCodeInvalidCOXE:
             sys.executable, pipeline_path,
             "--invalid-values", "AddressCode:COXE",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_addresscode_invalid_coxe"
         ]
         
         with allure.step("Inject invalid value 'COXE' into AddressCode column"):

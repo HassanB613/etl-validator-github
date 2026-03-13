@@ -50,7 +50,8 @@ class TestPaymentModeInvalidPOP:
             sys.executable, pipeline_path,
             "--invalid-values", "PaymentMode:POP",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_paymentmode_invalid_pop"
         ]
         
         with allure.step("Inject invalid value 'POP' into PaymentMode column"):

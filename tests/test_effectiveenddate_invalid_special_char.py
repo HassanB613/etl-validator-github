@@ -49,7 +49,8 @@ class TestEffectiveEndDateInvalidSpecialChar:
             sys.executable, pipeline_path,
             "--invalid-values", "EffectiveEndDate:@#$%!!",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_effectiveenddate_invalid_special_char"
         ]
         
         with allure.step("Inject special characters '@#$%!!' into EffectiveEndDate column"):

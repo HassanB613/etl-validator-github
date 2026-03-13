@@ -49,7 +49,8 @@ class TestPayeeIDSpecialChar:
             sys.executable, pipeline_path,
             "--invalid-values", "PayeeID:###",
             "--dev2",
-            "--rows", "25"
+            "--rows", "25",
+            "--test-name", "test_payeeid_invalid_special_char_hash"
         ]
         
         with allure.step("Inject special characters (###) into PayeeID column"):
