@@ -314,13 +314,14 @@ def upload_attachment_to_testrail(result_id, file_path):
         print(f"❌ Error uploading attachment: {e}")
         return False
 
-def report_to_testrail(test_id, status, comment):
+def report_to_testrail(test_id, status, comment, attachment_paths=None):
     """
     Report test results to TestRail using test ID.
     Includes link to Allure report and attaches zip when running in Jenkins.
     :param test_id: TestRail test ID
     :param status: Test result status (1=Passed, 2=Blocked, 3=Untested, 4=Retest, 5=Failed)
     :param comment: Additional comments for the test result
+    :param attachment_paths: Optional list of local file paths to attach to the TestRail result
     """
     if not TESTRAIL_URL or not TESTRAIL_API_KEY:
         print("⚠️ TestRail not configured. Skipping test result reporting.")
@@ -364,6 +365,15 @@ def report_to_testrail(test_id, status, comment):
                         print(f"🗑️ Cleaned up temporary zip file")
                     except:
                         pass
+
+        if result_id and attachment_paths:
+            for attachment_path in attachment_paths:
+                if not attachment_path:
+                    continue
+                if os.path.exists(attachment_path):
+                    upload_attachment_to_testrail(result_id, attachment_path)
+                else:
+                    print(f"⚠️ Attachment file not found, skipping: {attachment_path}")
     else:
         print(f"❌ Failed to report test result to TestRail: {response.text}")
 
@@ -1564,7 +1574,16 @@ def run_test_scenario(file_type, seed=None, rows=50):
             print("❌ Overall Test Result: Failed")
         else:
             print("✅ Overall Test Result: Passed")
-        report_to_testrail(TESTRAIL_TEST_ID, overall_status, detailed_comment)
+        excel_attachment = None
+        if file_path:
+            excel_attachment = os.path.splitext(file_path)[0] + ".xlsx"
+
+        report_to_testrail(
+            TESTRAIL_TEST_ID,
+            overall_status,
+            detailed_comment,
+            attachment_paths=[excel_attachment] if excel_attachment else None,
+        )
         return step_status, overall_status, archive_s3_path
 
 # --- Refactor scenario functions to return file_path and timestamp ---
@@ -2300,7 +2319,16 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
             print("❌ Overall Test Result: Failed")
         else:
             print("✅ Overall Test Result: Passed")
-        report_to_testrail(TESTRAIL_TEST_ID, overall_status, detailed_comment)
+        excel_attachment = None
+        if file_path:
+            excel_attachment = os.path.splitext(file_path)[0] + ".xlsx"
+
+        report_to_testrail(
+            TESTRAIL_TEST_ID,
+            overall_status,
+            detailed_comment,
+            attachment_paths=[excel_attachment] if excel_attachment else None,
+        )
         return step_status, overall_status
 
 def run_invalid_extension_scenario(extension, rows=50, formats=["csv"], seed=None, extra_args=None, timestamp=None):
