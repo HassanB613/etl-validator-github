@@ -9,7 +9,6 @@ Test Run: Invalid Date Format in EffectiveStartDate Column
 Injects invalid date format '2026/03/03' into the EffectiveStartDate column to test ETL validation.
 """
 
-@pytest.mark.skip(reason="Temporarily blocked to run half test suite")
 @allure.feature('ETL Validation')
 @allure.story('Invalid Data Handling')
 @allure.title('Test EffectiveStartDate Column with Invalid Date Format (2026/03/03)')

@@ -9,7 +9,6 @@ Test Run: Special Characters in OrganizationIdentifier Column
 Injects special characters (&&&&&&&) into the OrganizationIdentifier column to test ETL validation.
 """
 
-@pytest.mark.skip(reason="Temporarily blocked to run half test suite")
 @allure.feature('ETL Validation')
 @allure.story('Invalid Data Handling')
 @allure.title('Test OrganizationIdentifier Column with Invalid Special Characters (Ampersands)')

@@ -3,6 +3,7 @@ import os
 import subprocess
 import pytest
 import allure
+import re
 
 """
 Test Run: Blank Value in EffectiveStartDate Column
@@ -71,5 +72,15 @@ class TestEffectiveStartDateBlank:
             # Pipeline should complete without error
             assert pipe_result.returncode == 0, f"Pipeline crashed with return code {pipe_result.returncode}"
             
-            # Verify validation detected errors (check for success indication)
+            # Verify validation completed and reported DB/CSV comparison
             assert "Row counts MATCH" in pipe_result.stdout, f"Validation failed - output should contain 'Row counts MATCH', but got: {pipe_result.stdout[-500:]}"
+
+            # For this invalid scenario, a 0/0 match indicates DEV validation bug (no error captured)
+            db_csv_match = re.search(r"Step 8:\s*Passed\s*\(DB=(\d+),\s*CSV=(\d+)\)", pipe_result.stdout)
+            assert db_csv_match, f"Could not find Step 8 DB/CSV counts in output: {pipe_result.stdout[-800:]}"
+            db_count = int(db_csv_match.group(1))
+            csv_count = int(db_csv_match.group(2))
+            assert db_count > 0 and csv_count > 0, (
+                "Expected non-zero errors for blank EffectiveStartDate, "
+                f"but got DB={db_count}, CSV={csv_count}. This indicates an upstream DEV validation defect."
+            )

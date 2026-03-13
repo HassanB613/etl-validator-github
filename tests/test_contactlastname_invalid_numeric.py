@@ -9,7 +9,6 @@ Test Run: Numeric Value in ContactLastName Column
 Injects numeric value '123456789' into the ContactLastName column to test ETL validation.
 """
 
-@pytest.mark.skip(reason="Temporarily blocked to run half test suite")
 @allure.feature('ETL Validation')
 @allure.story('Invalid Data Handling')
 @allure.title('Test ContactLastName Column with Numeric Value (123456789)')
