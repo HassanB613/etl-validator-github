@@ -41,6 +41,7 @@ spec:
     parameters {
         string(name: 'CHECKPOINT_ID', defaultValue: '', description: 'Checkpoint ID used to resume paused test runs')
         string(name: 'RESUME_COUNT', defaultValue: '0', description: 'Internal counter for checkpoint auto-resume attempts')
+        string(name: 'PREVIOUS_BUILD_NUMBER', defaultValue: '', description: 'Previous build number for Allure result aggregation across checkpoint resumes')
     }
 
     environment {
@@ -127,6 +128,45 @@ EOF
                         echo ""
                         echo "AWS access verified successfully"
                     '''
+                }
+            }
+        }
+
+        stage('Restore Prior Allure Results') {
+            when {
+                expression { params.CHECKPOINT_ID?.trim() }
+            }
+            steps {
+                script {
+                    def sourceBuildNumber = params.PREVIOUS_BUILD_NUMBER?.trim()
+                    if (!sourceBuildNumber) {
+                        try {
+                            sourceBuildNumber = (env.BUILD_NUMBER.toInteger() - 1).toString()
+                        } catch (Exception ignored) {
+                            sourceBuildNumber = ''
+                        }
+                    }
+
+                    if (!sourceBuildNumber) {
+                        echo 'No previous build number available for Allure restore; continuing without historical results.'
+                        return
+                    }
+
+                    echo "Attempting to restore previous Allure results from build #${sourceBuildNumber}"
+                    try {
+                        step([
+                            $class: 'CopyArtifact',
+                            projectName: env.JOB_NAME,
+                            selector: [$class: 'SpecificBuildSelector', buildNumber: sourceBuildNumber],
+                            filter: 'allure-results/**',
+                            target: '.',
+                            optional: true,
+                            flatten: false,
+                            fingerprintArtifacts: true
+                        ])
+                    } catch (Exception ex) {
+                        echo "Could not restore prior Allure results (continuing): ${ex.getMessage()}"
+                    }
                 }
             }
         }
@@ -227,7 +267,8 @@ EOF
                         wait: false,
                         parameters: [
                             string(name: 'CHECKPOINT_ID', value: env.NEXT_CHECKPOINT_ID),
-                            string(name: 'RESUME_COUNT', value: nextResumeCount.toString())
+                            string(name: 'RESUME_COUNT', value: nextResumeCount.toString()),
+                            string(name: 'PREVIOUS_BUILD_NUMBER', value: env.BUILD_NUMBER)
                         ]
                     )
                 }
@@ -253,6 +294,9 @@ EOF
     post {
         always {
             echo 'Pipeline finished.'
+
+            // Persist raw Allure results so resumed builds can aggregate from prior runs
+            archiveArtifacts artifacts: 'allure-results/**', allowEmptyArchive: true
             
             // Publish Allure Report - run inside java container
             container('java') {
