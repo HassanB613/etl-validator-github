@@ -377,6 +377,18 @@ def report_to_testrail(test_id, status, comment, attachment_paths=None):
     else:
         print(f"❌ Failed to report test result to TestRail: {response.text}")
 
+
+def build_scenario_header(file_type):
+    """Build scenario label with optional sequence metadata from pytest env vars."""
+    sequence_index = os.environ.get("TEST_SEQUENCE_INDEX")
+    sequence_total = os.environ.get("TEST_SEQUENCE_TOTAL")
+
+    if sequence_index and sequence_total:
+        return f"Scenario: {file_type} ({sequence_index}/{sequence_total})"
+    if sequence_index:
+        return f"Scenario: {file_type} ({sequence_index})"
+    return f"Scenario: {file_type}"
+
 def add_case_to_run(run_id, case_id):
     """
     Add a test case to an existing TestRail run.
@@ -1577,7 +1589,7 @@ def run_test_scenario(file_type, seed=None, rows=50):
         archive_s3_path = f"s3://{BUCKET}/bankfile/archive/{datetime.now().strftime('%Y')}/{datetime.now().strftime('%m')}/{archive_filename}"
         
         # --- Now report to TestRail ---
-        detailed_comment = f"Scenario: {file_type}\n" + "\n".join([f"{step}: {status}" for step, status in step_status.items()])
+        detailed_comment = build_scenario_header(file_type) + "\n" + "\n".join([f"{step}: {status}" for step, status in step_status.items()])
         if unexpected_parquet_findings:
             unique_parquet_keys = sorted(set(unexpected_parquet_findings))
             print("\n⚠️ Unexpected parquet file(s) in error folder (expected CSV only):")
@@ -2340,7 +2352,7 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
                     os.rmdir(evidence_dir)
                     print(f"🗑️ Removed empty evidence directory: {evidence_dir}")
         # --- Now report to TestRail ---
-        detailed_comment = f"Scenario: {file_type}\n" + "\n".join([f"{step}: {status}" for step, status in step_status.items()])
+        detailed_comment = build_scenario_header(file_type) + "\n" + "\n".join([f"{step}: {status}" for step, status in step_status.items()])
         if unexpected_parquet_findings:
             unique_parquet_keys = sorted(set(unexpected_parquet_findings))
             print("\n⚠️ Unexpected parquet file(s) in error folder (expected CSV only):")

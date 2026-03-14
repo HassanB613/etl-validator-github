@@ -75,6 +75,20 @@ def checkpoint_test_handler(request, checkpoint_manager):
             returncode=0,
         )
 
+    if not hasattr(checkpoint_manager, "_testrail_total_tests"):
+        checkpoint_manager._testrail_total_tests = sum(
+            1
+            for item in request.session.items
+            if item.get_closest_marker("skip") is None
+        )
+
+    if not hasattr(checkpoint_manager, "_testrail_sequence_counter"):
+        checkpoint_manager._testrail_sequence_counter = len(checkpoint_manager.completed_tests)
+
+    checkpoint_manager._testrail_sequence_counter += 1
+    os.environ["TEST_SEQUENCE_INDEX"] = str(checkpoint_manager._testrail_sequence_counter)
+    os.environ["TEST_SEQUENCE_TOTAL"] = str(checkpoint_manager._testrail_total_tests)
+
     # Run the test
     yield
 
