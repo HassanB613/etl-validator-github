@@ -9,7 +9,7 @@ spec:
     restartPolicy: Never
     containers:
         - name: python
-                    image: "public.ecr.aws/docker/library/python:3.9"
+          image: "public.ecr.aws/docker/library/python:3.9"
           command: ["/bin/sh", "-c"]
           args: ["cat"]
           tty: true
@@ -365,13 +365,17 @@ PY
         failure {
             script {
                 def readyFolderStuckDetected = false
-                if (fileExists("${env.WORKSPACE}/pytest-output.log")) {
-                    def pytestLog = readFile("${env.WORKSPACE}/pytest-output.log")
-                    readyFolderStuckDetected = (
-                        pytestLog.contains('Detected 2 consecutive pre-upload gate failures') ||
-                        pytestLog.contains('Ready folder appears stuck (Glue not clearing files)') ||
-                        pytestLog.contains('Consecutive pre-upload gate failures: 2/2')
-                    )
+                try {
+                    if (fileExists("${env.WORKSPACE}/pytest-output.log")) {
+                        def pytestLog = readFile("${env.WORKSPACE}/pytest-output.log")
+                        readyFolderStuckDetected = (
+                            pytestLog.contains('Detected 2 consecutive pre-upload gate failures') ||
+                            pytestLog.contains('Ready folder appears stuck (Glue not clearing files)') ||
+                            pytestLog.contains('Consecutive pre-upload gate failures: 2/2')
+                        )
+                    }
+                } catch (Exception e) {
+                    echo "Skipping failure log inspection (workspace unavailable): ${e.getMessage()}"
                 }
 
                 if (readyFolderStuckDetected) {
