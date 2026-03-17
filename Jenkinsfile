@@ -1,35 +1,35 @@
 pipeline {
         agent {
                 kubernetes {
-                                                                                                yaml """
+                                                yaml '''
 apiVersion: v1
 kind: Pod
 spec:
-    serviceAccountName: jenkins-role
-    restartPolicy: Never
-    containers:
-        - name: python
-            image: "public.ecr.aws/docker/library/python:3.9"
-            command: ["/bin/sh", "-c"]
-            args: ["cat"]
-            tty: true
-            resources:
-                limits:
-                    cpu: "2000m"
-                    memory: "2Gi"
-                requests:
-                    cpu: "1000m"
-                    memory: "1Gi"
-        - name: awscli
-            image: "public.ecr.aws/aws-cli/aws-cli:latest"
-            command: ["cat"]
-            tty: true
-        - name: java
-            image: "public.ecr.aws/docker/library/eclipse-temurin:17-jre"
-            command: ["/bin/sh", "-c"]
-            args: ["cat"]
-            tty: true
-""".stripIndent()
+        serviceAccountName: jenkins-role
+        restartPolicy: Never
+        containers:
+                - name: python
+                    image: "public.ecr.aws/docker/library/python:3.9"
+                    command: ["/bin/sh", "-c"]
+                    args: ["cat"]
+                    tty: true
+                    resources:
+                        limits:
+                            cpu: "2000m"
+                            memory: "2Gi"
+                        requests:
+                            cpu: "1000m"
+                            memory: "1Gi"
+                - name: awscli
+                    image: "public.ecr.aws/aws-cli/aws-cli:latest"
+                    command: ["cat"]
+                    tty: true
+                - name: java
+                    image: "public.ecr.aws/docker/library/eclipse-temurin:17-jre"
+                    command: ["/bin/sh", "-c"]
+                    args: ["cat"]
+                    tty: true
+'''
         }
     }
     
