@@ -9,7 +9,7 @@ spec:
     restartPolicy: Never
     containers:
         - name: python
-          image: "python:3.9"
+                    image: "public.ecr.aws/docker/library/python:3.9"
           command: ["/bin/sh", "-c"]
           args: ["cat"]
           tty: true
@@ -21,11 +21,11 @@ spec:
               cpu: "1000m"
               memory: "1Gi"
         - name: awscli
-          image: "amazon/aws-cli:latest"
+                    image: "public.ecr.aws/aws-cli/aws-cli:latest"
           command: ["cat"]
           tty: true
         - name: java
-          image: "eclipse-temurin:17-jre"
+                    image: "public.ecr.aws/docker/library/eclipse-temurin:17-jre"
           command: ["/bin/sh", "-c"]
           args: ["cat"]
           tty: true
@@ -303,34 +303,36 @@ EOF
         always {
             echo 'Pipeline finished.'
 
-            // Persist raw Allure results so resumed builds can aggregate from prior runs
-            archiveArtifacts artifacts: 'allure-results/**', allowEmptyArchive: true
-            
-            // Publish Allure Report - run inside java container
-            container('java') {
-                sh 'java -version'
-                allure([
-                    includeProperties: false,
-                    jdk: '',
-                    properties: [],
-                    reportBuildPolicy: 'ALWAYS',
-                    results: [[path: 'allure-results']]
-                ])
-            }
-            
-            // Post TestRail result with Allure HTML link and zip attachment
-            container('python') {
-                script {
-                    env.TESTRAIL_STATUS = (currentBuild.currentResult == 'SUCCESS') ? '1' : '5'
-                    env.TESTRAIL_RESULT_TEXT = currentBuild.currentResult
-                }
-                sh '''
-                    echo "Posting TestRail result with Allure link and attachment..."
+            script {
+                try {
+                    // Persist raw Allure results so resumed builds can aggregate from prior runs
+                    archiveArtifacts artifacts: 'allure-results/**', allowEmptyArchive: true
 
-                    # Ensure dependencies are available even if Build stage was skipped
-                    python3 -m pip install --quiet -r ${WORKSPACE}/requirements.txt || true
+                    // Publish Allure Report - run inside java container
+                    container('java') {
+                        sh 'java -version'
+                        allure([
+                            includeProperties: false,
+                            jdk: '',
+                            properties: [],
+                            reportBuildPolicy: 'ALWAYS',
+                            results: [[path: 'allure-results']]
+                        ])
+                    }
 
-                    python3 - <<'PY'
+                    // Post TestRail result with Allure HTML link and zip attachment
+                    container('python') {
+                        script {
+                            env.TESTRAIL_STATUS = (currentBuild.currentResult == 'SUCCESS') ? '1' : '5'
+                            env.TESTRAIL_RESULT_TEXT = currentBuild.currentResult
+                        }
+                        sh '''
+                            echo "Posting TestRail result with Allure link and attachment..."
+
+                            # Ensure dependencies are available even if Build stage was skipped
+                            python3 -m pip install --quiet -r ${WORKSPACE}/requirements.txt || true
+
+                            python3 - <<'PY'
 import os
 import sys
 
@@ -343,9 +345,12 @@ comment = f"Jenkins pipeline result: {result_text}"
 
 report_to_testrail(TESTRAIL_TEST_ID, status, comment)
 PY
-                '''
+                        '''
+                    }
+                } catch (Exception e) {
+                    echo "Skipping workspace-dependent post actions (agent/workspace unavailable): ${e.getMessage()}"
+                }
             }
-            
 
         }
         success {
