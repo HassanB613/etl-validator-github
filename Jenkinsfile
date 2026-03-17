@@ -1,7 +1,7 @@
 pipeline {
         agent {
                 kubernetes {
-                                                yaml """
+                                                                                                yaml """
 apiVersion: v1
 kind: Pod
 spec:
@@ -9,7 +9,7 @@ spec:
     restartPolicy: Never
     containers:
         - name: python
-            image: public.ecr.aws/docker/library/python:3.9
+            image: "public.ecr.aws/docker/library/python:3.9"
             command: ["/bin/sh", "-c"]
             args: ["cat"]
             tty: true
@@ -21,11 +21,11 @@ spec:
                     cpu: "1000m"
                     memory: "1Gi"
         - name: awscli
-            image: public.ecr.aws/aws-cli/aws-cli:latest
+            image: "public.ecr.aws/aws-cli/aws-cli:latest"
             command: ["cat"]
             tty: true
         - name: java
-            image: public.ecr.aws/docker/library/eclipse-temurin:17-jre
+            image: "public.ecr.aws/docker/library/eclipse-temurin:17-jre"
             command: ["/bin/sh", "-c"]
             args: ["cat"]
             tty: true
