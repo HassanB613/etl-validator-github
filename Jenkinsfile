@@ -20,15 +20,15 @@ spec:
             requests:
               cpu: "1000m"
               memory: "1Gi"
-        - name: awscli
+                - name: awscli
                     image: "public.ecr.aws/aws-cli/aws-cli:latest"
-          command: ["cat"]
-          tty: true
-        - name: java
+                    command: ["cat"]
+                    tty: true
+                - name: java
                     image: "public.ecr.aws/docker/library/eclipse-temurin:17-jre"
-          command: ["/bin/sh", "-c"]
-          args: ["cat"]
-          tty: true
+                    command: ["/bin/sh", "-c"]
+                    args: ["cat"]
+                    tty: true
 '''
         }
     }
