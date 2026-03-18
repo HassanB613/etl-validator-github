@@ -9,6 +9,10 @@ import os
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# S3 ready folder coordinates (dev2 environment)
+_S3_READY_BUCKET = "mtfpm-dev2-s3-mtfdmstaging-us-east-1"
+_S3_READY_PREFIX = "bankfile/ready"
+
 from checkpoint_manager import get_checkpoint_manager
 
 
@@ -38,6 +42,31 @@ def gate_guard_session_setup():
                 print(f"🧹 Cleared stale gate guard file: {path}")
             except Exception as e:
                 print(f"⚠️ Could not clear stale gate guard file {path}: {e}")
+    yield
+
+
+@pytest.fixture(scope="session", autouse=True)
+def s3_ready_folder_cleanup():
+    """
+    Clear any stale files from the S3 ready folder before the test session starts.
+    Prevents pre-upload gate timeouts caused by files left behind by failed prior runs.
+    """
+    try:
+        import boto3
+        s3 = boto3.client("s3")
+        result = s3.list_objects_v2(Bucket=_S3_READY_BUCKET, Prefix=_S3_READY_PREFIX + "/")
+        files = [obj for obj in result.get("Contents", []) if not obj["Key"].endswith("/")]
+        if not files:
+            print(f"\n✅ S3 ready folder is empty — no pre-test cleanup needed.")
+        else:
+            print(f"\n⚠️ Pre-test S3 cleanup: found {len(files)} stale file(s) in ready folder:")
+            for obj in files:
+                key = obj["Key"]
+                s3.delete_object(Bucket=_S3_READY_BUCKET, Key=key)
+                print(f"   🗑️ Deleted stale file: {key}")
+            print(f"✅ Pre-test S3 cleanup complete. Ready folder is now clear.")
+    except Exception as e:
+        print(f"\n⚠️ Pre-test S3 cleanup skipped (non-fatal): {e}")
     yield
 
 
