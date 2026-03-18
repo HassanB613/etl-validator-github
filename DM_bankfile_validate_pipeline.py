@@ -1050,6 +1050,21 @@ def upload_to_s3(file_path):
         "ready_gate_reason": ready_reason,
     }
 
+
+def cleanup_s3_ready_file(s3_key):
+    """
+    Attempt to delete a stuck file from the S3 ready folder after a Glue job failure.
+    Non-fatal: logs a warning on error instead of raising.
+    """
+    if not s3_key:
+        return
+    try:
+        s3.delete_object(Bucket=BUCKET, Key=s3_key)
+        print(f"🗑️ Cleaned up stuck S3 ready file after Glue failure: {s3_key}")
+    except Exception as e:
+        print(f"⚠️ Could not delete stuck S3 ready file {s3_key}: {e}")
+
+
 # --------------------
 # Step 3: Trigger & monitor Glue
 # --------------------
@@ -1491,6 +1506,7 @@ def run_test_scenario(file_type, seed=None, rows=50):
         
         if not glue_job_success:
             step_status["Step 4"] = f"Failed: {glue_reason}"
+            cleanup_s3_ready_file(upload_metadata.get("s3_key"))
             raise Exception(f"❌ Glue job failed: {glue_reason}")
         step_status["Step 4"] = f"Passed (RunId={glue_run_id}; {glue_reason})"
         glue_completed_epoch = time.time()
@@ -2310,6 +2326,7 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
         
         if not glue_job_success:
             step_status["Step 4"] = f"Failed: {glue_reason}"
+            cleanup_s3_ready_file((upload_metadata or {}).get("s3_key"))
             raise Exception(f"❌ Glue job failed: {glue_reason}")
         step_status["Step 4"] = f"Passed (RunId={glue_run_id}; {glue_reason})"
         glue_completed_epoch = time.time()
