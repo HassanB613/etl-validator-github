@@ -429,6 +429,7 @@ def build_testrail_comment(file_type, step_status):
     parts = [build_scenario_header(file_type)]
 
     notes = TESTRAIL_SCENARIO_NOTES.get(file_type)
+    print(f"🔍 DEBUG build_testrail_comment: file_type='{file_type}', notes_found={notes is not None}, available_keys={list(TESTRAIL_SCENARIO_NOTES.keys())}")
     if notes:
         parts.append("Notes:")
         parts.extend([f"- {note}" for note in notes])
