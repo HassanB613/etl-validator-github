@@ -389,6 +389,53 @@ def build_scenario_header(file_type):
         return f"Scenario: {file_type} ({sequence_index})"
     return f"Scenario: {file_type}"
 
+
+TESTRAIL_SCENARIO_NOTES = {
+    "test_accountnumber_invalid_single_digit": [
+        "PaymentMode=EFT is the key trigger where account fields are mandatory.",
+        "PaymentMode=CHK typically does not fail for bad or missing account numbers because those fields are expected blank.",
+        "Org-type rules add nuance: R rows may allow blank or optional account fields, while M and P generally require them.",
+        "Partial matched outcomes are expected and valid for this mixed-context test design.",
+    ],
+    "test_addresscode_invalid_coxe": [
+        "Address handling is conditional.",
+        "Address fields may be blank for OrganizationCode=M and OrganizationCode=R.",
+        "Address fields are required for records using PaymentMode=CHK.",
+        "The same invalid AddressCode value can be rejected on some rows and ignored on others in mixed generated data.",
+    ],
+    "test_addresscode_invalid_special_char": [
+        "Address handling is conditional.",
+        "Address fields may be blank for OrganizationCode=M and OrganizationCode=R.",
+        "Address fields are required for records using PaymentMode=CHK.",
+        "The same invalid AddressCode value can be rejected on some rows and ignored on others in mixed generated data.",
+    ],
+    "test_organizationidentifier_invalid_ampersand": [
+        "OrganizationIdentifier validation depends on org-type relationship rules.",
+        "For OrganizationCode=R, PayeeID and OrganizationIdentifier should be different.",
+        "For OrganizationCode=D/P/M, PayeeID and OrganizationIdentifier should be the same.",
+        "Partial matched outcomes are expected and valid for this mixed-context test design.",
+    ],
+    "test_profitnonprofit_invalid_special_char": [
+        "ProfitNonprofit enforcement is conditional by org type.",
+        "For OrganizationCode=M, ProfitNonprofit is optional.",
+        "For OrganizationCode=D and OrganizationCode=P, ProfitNonprofit is required.",
+        "Partial matched outcomes are expected and valid for this mixed-context test design.",
+    ],
+}
+
+
+def build_testrail_comment(file_type, step_status):
+    """Build TestRail result comment with optional scenario notes and step outcomes."""
+    parts = [build_scenario_header(file_type)]
+
+    notes = TESTRAIL_SCENARIO_NOTES.get(file_type)
+    if notes:
+        parts.append("Notes:")
+        parts.extend([f"- {note}" for note in notes])
+
+    parts.extend([f"{step}: {status}" for step, status in step_status.items()])
+    return "\n".join(parts)
+
 def add_case_to_run(run_id, case_id):
     """
     Add a test case to an existing TestRail run.
@@ -1589,7 +1636,7 @@ def run_test_scenario(file_type, seed=None, rows=50):
         archive_s3_path = f"s3://{BUCKET}/bankfile/archive/{datetime.now().strftime('%Y')}/{datetime.now().strftime('%m')}/{archive_filename}"
         
         # --- Now report to TestRail ---
-        detailed_comment = build_scenario_header(file_type) + "\n" + "\n".join([f"{step}: {status}" for step, status in step_status.items()])
+        detailed_comment = build_testrail_comment(file_type, step_status)
         if unexpected_parquet_findings:
             unique_parquet_keys = sorted(set(unexpected_parquet_findings))
             print("\n⚠️ Unexpected parquet file(s) in error folder (expected CSV only):")
