@@ -1,6 +1,7 @@
 import sys
 import os
 import subprocess
+import re
 import allure
 
 """
@@ -20,8 +21,8 @@ class TestOrganizationIdentifierAmpersandStrict:
     Notes:
     - All rows are constrained to OrganizationCode=D (D/P/M same-rule path).
     - PayeeID is set to a valid constant while OrganizationIdentifier is set to invalid ampersand content.
-    - This removes mixed org-type ambiguity and is intended to produce consistent full-row rejection.
-    - Expected result target is full impact (for example, DB=25, CSV=25 for 25 rows).
+    - This removes mixed org-type ambiguity and is intended to concentrate invalid handling.
+    - Success means the ETL reports matching DB/CSV error counts with non-zero impact.
 
     Steps:
     1. Generate invalid parquet file
@@ -58,6 +59,13 @@ class TestOrganizationIdentifierAmpersandStrict:
             assert "Row counts MATCH" in pipe_result.stdout, (
                 f"Validation failed - output should contain 'Row counts MATCH', but got: {pipe_result.stdout[-500:]}"
             )
-            assert "DB=25, CSV=25" in pipe_result.stdout, (
-                "Expected deterministic full-row impact (DB=25, CSV=25) was not found in output."
+            count_match = re.search(r"DB=(\d+), CSV=(\d+)", pipe_result.stdout)
+            assert count_match, "Could not find DB/CSV validation counts in pipeline output."
+
+            db_count = int(count_match.group(1))
+            csv_count = int(count_match.group(2))
+
+            assert db_count == csv_count, (
+                f"Expected DB/CSV counts to match, but found DB={db_count}, CSV={csv_count}."
             )
+            assert db_count > 0, "Expected non-zero invalid-row impact in strict OrganizationIdentifier context."

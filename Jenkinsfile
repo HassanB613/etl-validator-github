@@ -244,7 +244,7 @@ EOF
                             }
                             env.NEXT_CHECKPOINT_ID = checkpointId.trim()
                             currentBuild.description = "Checkpoint pause: ${env.NEXT_CHECKPOINT_ID} | resume ${params.RESUME_COUNT ?: '0'}/${env.MAX_RESUME_COUNT}"
-                            echo "Checkpoint pause detected. Next run will resume with CHECKPOINT_ID=${env.NEXT_CHECKPOINT_ID}"
+                            echo "Checkpoint pause detected. Next run will resume with CHECKPOINT_ID=${checkpointId.trim()}"
                         }
                     }
                 }
@@ -252,12 +252,26 @@ EOF
         }
 
         stage('Queue Resume Run') {
-            when {
-                expression { env.CHECKPOINT_TRIGGERED == 'true' }
-            }
             steps {
                 script {
-                    if (!env.NEXT_CHECKPOINT_ID?.trim()) {
+                    def checkpointTriggered = env.CHECKPOINT_TRIGGERED == 'true'
+                    if (!checkpointTriggered && fileExists("${env.WORKSPACE}/checkpoint_triggered.txt")) {
+                        checkpointTriggered = readFile("${env.WORKSPACE}/checkpoint_triggered.txt").trim() == 'true'
+                    }
+
+                    if (!checkpointTriggered) {
+                        echo 'No checkpoint pause detected. Skipping resume queue.'
+                        return
+                    }
+
+                    def checkpointId = env.NEXT_CHECKPOINT_ID?.trim()
+                    if ((!checkpointId || checkpointId == 'null') && fileExists("${env.WORKSPACE}/checkpoint_id.txt")) {
+                        checkpointId = readFile("${env.WORKSPACE}/checkpoint_id.txt").trim()
+                    }
+                    if (!checkpointId || checkpointId == 'null') {
+                        checkpointId = params.CHECKPOINT_ID?.trim()
+                    }
+                    if (!checkpointId || checkpointId == 'null') {
                         error("Checkpoint pause detected but no CHECKPOINT_ID was found. Cannot queue resume run.")
                     }
 
@@ -274,14 +288,14 @@ EOF
                     }
 
                     int nextResumeCount = currentResumeCount + 1
-                    currentBuild.description = "Checkpoint queued: ${env.NEXT_CHECKPOINT_ID} | next ${nextResumeCount}/${maxResumeCount}"
+                    currentBuild.description = "Checkpoint queued: ${checkpointId} | next ${nextResumeCount}/${maxResumeCount}"
 
-                    echo "Queuing resume build with CHECKPOINT_ID=${env.NEXT_CHECKPOINT_ID} (resume ${nextResumeCount}/${maxResumeCount})"
+                    echo "Queuing resume build with CHECKPOINT_ID=${checkpointId} (resume ${nextResumeCount}/${maxResumeCount})"
                     build(
                         job: env.JOB_NAME,
                         wait: false,
                         parameters: [
-                            string(name: 'CHECKPOINT_ID', value: env.NEXT_CHECKPOINT_ID),
+                            string(name: 'CHECKPOINT_ID', value: checkpointId),
                             string(name: 'RESUME_COUNT', value: nextResumeCount.toString()),
                             string(name: 'PREVIOUS_BUILD_NUMBER', value: env.BUILD_NUMBER)
                         ]

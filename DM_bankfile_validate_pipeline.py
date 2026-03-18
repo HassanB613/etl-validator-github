@@ -424,12 +424,32 @@ TESTRAIL_SCENARIO_NOTES = {
 }
 
 
+def resolve_testrail_notes(file_type):
+    """Resolve TestRail scenario notes for exact or normalized scenario names."""
+    notes = TESTRAIL_SCENARIO_NOTES.get(file_type)
+    if notes:
+        return notes
+
+    suffixes = [
+        "_eft_required",
+        "_chk_required",
+        "_required_org",
+        "_strict",
+    ]
+    normalized = file_type
+    for suffix in suffixes:
+        if normalized.endswith(suffix):
+            normalized = normalized[: -len(suffix)]
+            break
+
+    return TESTRAIL_SCENARIO_NOTES.get(normalized)
+
+
 def build_testrail_comment(file_type, step_status):
     """Build TestRail result comment with optional scenario notes and step outcomes."""
     parts = [build_scenario_header(file_type)]
 
-    notes = TESTRAIL_SCENARIO_NOTES.get(file_type)
-    print(f"🔍 DEBUG build_testrail_comment: file_type='{file_type}', notes_found={notes is not None}, available_keys={list(TESTRAIL_SCENARIO_NOTES.keys())}")
+    notes = resolve_testrail_notes(file_type)
     if notes:
         parts.append("Notes:")
         parts.extend([f"- {note}" for note in notes])
