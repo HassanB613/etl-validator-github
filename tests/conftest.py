@@ -21,12 +21,6 @@ GATE_GUARD_DIR = os.path.join(BASE_DIR, "test_output")
 GATE_GUARD_STATE_FILE = os.path.join(GATE_GUARD_DIR, "pre_upload_gate_state.json")
 GATE_GUARD_STOP_FILE = os.path.join(GATE_GUARD_DIR, "STOP_TESTING_READY_STUCK.flag")
 
-_ACCOUNTNUMBER_ONLY_TESTS = {
-    "test_accountnumber_invalid_single_digit",
-    "test_accountnumber_invalid_single_digit_eft_required",
-    "test_accountnumber_invalid_special_char",
-}
-
 
 def _read_stop_testing_message():
     if not os.path.exists(GATE_GUARD_STOP_FILE):
@@ -157,12 +151,4 @@ def pytest_configure(config):
     print(f"{'=' * 60}\n")
 
 
-def pytest_collection_modifyitems(config, items):
-    """Temporarily limit execution to the three account-number tests."""
-    skip_non_accountnumber = pytest.mark.skip(
-        reason="Temporarily skipping: only running 3 account-number tests."
-    )
 
-    for item in items:
-        if item.name not in _ACCOUNTNUMBER_ONLY_TESTS:
-            item.add_marker(skip_non_accountnumber)
