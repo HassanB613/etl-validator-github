@@ -759,7 +759,7 @@ def download_latest_error_csv_in_window(local_evidence_dir, window_start_epoch=N
         print(f"❌ Failed to download error CSV in run window: {e}")
         return None, 0
 
-def validate_error_file_with_database(glue_run_id, local_evidence_dir, run_start_epoch=None, run_window_seconds=180, max_attempts=4, wait_seconds=30, wait_after_ready_seconds=120):
+def validate_error_file_with_database(glue_run_id, local_evidence_dir, run_start_epoch=None, run_window_seconds=180, max_attempts=8, wait_seconds=45, wait_after_ready_seconds=180):
     """
     Full database validation workflow for error file testing:
     1. Get BATCH_ID from JOB_CONTROL using Glue Run ID (JOB_ID column)
@@ -1595,7 +1595,7 @@ def run_test_scenario(file_type, seed=None, rows=50):
                     evidence_dir,
                     run_start_epoch=validation_window_start_epoch,
                     run_window_seconds=180,
-                    wait_after_ready_seconds=120,
+                    wait_after_ready_seconds=180,
                 )
                 csv_name = os.path.basename(db_details.get("csv_file")) if db_details.get("csv_file") else "N/A"
                 if ALLURE_AVAILABLE:
@@ -2372,7 +2372,7 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
                 evidence_dir,
                 run_start_epoch=validation_window_start_epoch,
                 run_window_seconds=180,
-                wait_after_ready_seconds=120,
+                wait_after_ready_seconds=180,
             )
             csv_name = os.path.basename(db_details.get("csv_file")) if db_details.get("csv_file") else "N/A"
             if ALLURE_AVAILABLE:
