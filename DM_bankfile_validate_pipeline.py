@@ -30,7 +30,7 @@ except ImportError:
 BUCKET = "mtfpm-dev2-s3-mtfdmstaging-us-east-1"
 BUCKET_DEV2 = "mtfpm-dev-s3-mtfdmstaging-us-east-1"  # Dev2 (backup)
 
-GLUE_JOB_NAME = "load-bank-file-stg"
+GLUE_JOB_NAME = "load-bank-file-stg-dev2"
 GLUE_JOB_NAME_DEV1 = "mtfpm-bankfile-validation-error-handling-dev"  # Dev1 (backup)
 
 S3_PREFIX = "bankfile/ready"           # Update to the correct prefix
