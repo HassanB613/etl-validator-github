@@ -113,7 +113,7 @@ class BankDataGenerator:
         # Field generators
         self.field_generators = {
             'RecordOperation': lambda: random.choice(['A', 'D']),
-            'OrganizationCode': lambda: random.choice(['M', 'D', 'P', 'R']),
+            'OrganizationCode': lambda: random.choice(['M', 'D', 'P']),
             'ProfitNonprofit': lambda: random.choice(['P', 'NP']),
             'OrganizationNPI': lambda: self.generate_npi(),
             'PaymentMode': lambda: random.choice(['EFT', 'CHK']),
@@ -138,7 +138,7 @@ class BankDataGenerator:
 
     def generate_start_date(self):
         """Generate EffectiveStartDate according to business rules:
-        - Required and not null for all org codes (M, D, P, R)
+        - Required and not null for all supported org codes (M, D, P)
         - If blank/prior date, system defaults to current date
         - If future date, process for prenote
         """
@@ -266,7 +266,7 @@ class BankDataGenerator:
 
     def generate_row(self):
         # OrganizationCode: strictly enforce allowed values and length
-        code = random.choice(['M', 'D', 'P', 'R'])
+        code = random.choice(['M', 'D', 'P'])
         # Widen numeric space for potential longer IDs (PayeeID up to 9 digits)
         # Safety: ensure configured bounds are sensible
         min_digits = max(1, PAYEE_ID_MIN_DIGITS)

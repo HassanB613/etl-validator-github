@@ -2707,7 +2707,7 @@ def run_min_max_limits_scenario(column_limits, rows=50, formats=["csv"], seed=No
         # Field constraints for string length, enums, etc.
         field_constraints = {
             'RecordOperation': {'enums': ['A', 'D']},
-            'OrganizationCode': {'enums': ['M', 'D', 'P', 'R']},
+            'OrganizationCode': {'enums': ['M', 'D', 'P']},
             'ProfitNonprofit': {'enums': ['P', 'NP']},
             'OrganizationNPI': {'min_length': 10, 'max_length': 10, 'numeric': True},
             'PaymentMode': {'enums': ['EFT', 'CHK']},
