@@ -30,7 +30,7 @@ except ImportError:
 BUCKET = "mtfpm-dev2-s3-mtfdmstaging-us-east-1"
 BUCKET_DEV2 = "mtfpm-dev-s3-mtfdmstaging-us-east-1"  # Dev2 (backup)
 
-GLUE_JOB_NAME = "load-bank-file-stg-dev2"
+GLUE_JOB_NAME = "load-bank-file-stg"
 GLUE_JOB_NAME_DEV1 = "mtfpm-bankfile-validation-error-handling-dev"  # Dev1 (backup)
 
 S3_PREFIX = "bankfile/ready"           # Update to the correct prefix
@@ -2437,7 +2437,7 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
                     os.rmdir(evidence_dir)
                     print(f"🗑️ Removed empty evidence directory: {evidence_dir}")
         # --- Now report to TestRail ---
-        detailed_comment = build_scenario_header(file_type) + "\n" + "\n".join([f"{step}: {status}" for step, status in step_status.items()])
+            detailed_comment = build_testrail_comment(file_type, step_status)
         if unexpected_parquet_findings:
             unique_parquet_keys = sorted(set(unexpected_parquet_findings))
             print("\n⚠️ Unexpected parquet file(s) in error folder (expected CSV only):")
