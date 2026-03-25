@@ -61,7 +61,7 @@ class TestRoutingTransitNumberInvalidShort:
             print("=" * 60)
         
         with allure.step("Run ETL pipeline"):
-            pipe_result = subprocess.run(pipe_command, capture_output=True, text=True)
+            pipe_result = subprocess.run(pipe_command, capture_output=True, text=True, encoding='utf-8')
         
         with allure.step("Verify pipeline detected invalid data"):
             allure.attach(pipe_result.stdout, "Pipeline Output", allure.attachment_type.TEXT)

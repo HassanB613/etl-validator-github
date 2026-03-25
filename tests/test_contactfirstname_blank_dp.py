@@ -42,7 +42,7 @@ class TestContactFirstNameBlankDP:
         ]
 
         with allure.step("Run ETL pipeline with blank ContactFirstName for D/P records"):
-            pipe_result = subprocess.run(pipe_command, capture_output=True, text=True)
+            pipe_result = subprocess.run(pipe_command, capture_output=True, text=True, encoding='utf-8')
 
         with allure.step("Verify pipeline output"):
             allure.attach(pipe_result.stdout, "Pipeline Output", allure.attachment_type.TEXT)
