@@ -30,7 +30,7 @@ def _get_pytest_run_limit():
         try:
             return max(int(raw_limit), 0)
         except ValueError:
-            print(f"⚠️ Ignoring invalid PYTEST_RUN_LIMIT value: {raw_limit}")
+            print(f"WARNING: Ignoring invalid PYTEST_RUN_LIMIT value: {raw_limit}")
 
     if os.environ.get("BUILD_URL"):
         return DEFAULT_JENKINS_TEST_LIMIT
@@ -55,9 +55,9 @@ def gate_guard_session_setup():
         if os.path.exists(path):
             try:
                 os.remove(path)
-                print(f"🧹 Cleared stale gate guard file: {path}")
+                print(f"CLEANUP: Cleared stale gate guard file: {path}")
             except Exception as e:
-                print(f"⚠️ Could not clear stale gate guard file {path}: {e}")
+                print(f"WARNING: Could not clear stale gate guard file {path}: {e}")
     yield
 
 
@@ -73,16 +73,16 @@ def s3_ready_folder_cleanup():
         result = s3.list_objects_v2(Bucket=_S3_READY_BUCKET, Prefix=_S3_READY_PREFIX + "/")
         files = [obj for obj in result.get("Contents", []) if not obj["Key"].endswith("/")]
         if not files:
-            print(f"\n✅ S3 ready folder is empty — no pre-test cleanup needed.")
+            print("\nOK: S3 ready folder is empty - no pre-test cleanup needed.")
         else:
-            print(f"\n⚠️ Pre-test S3 cleanup: found {len(files)} stale file(s) in ready folder:")
+            print(f"\nWARNING: Pre-test S3 cleanup: found {len(files)} stale file(s) in ready folder:")
             for obj in files:
                 key = obj["Key"]
                 s3.delete_object(Bucket=_S3_READY_BUCKET, Key=key)
-                print(f"   🗑️ Deleted stale file: {key}")
-            print(f"✅ Pre-test S3 cleanup complete. Ready folder is now clear.")
+                print(f"   DELETED stale file: {key}")
+            print("OK: Pre-test S3 cleanup complete. Ready folder is now clear.")
     except Exception as e:
-        print(f"\n⚠️ Pre-test S3 cleanup skipped (non-fatal): {e}")
+        print(f"\nWARNING: Pre-test S3 cleanup skipped (non-fatal): {e}")
     yield
 
 
@@ -104,17 +104,17 @@ def checkpoint_test_handler(request, checkpoint_manager):
 
     stop_message = _read_stop_testing_message()
     if stop_message:
-        pytest.exit(f"\n🛑 {stop_message}", returncode=1)
+        pytest.exit(f"\nSTOP: {stop_message}", returncode=1)
 
     if checkpoint_manager.should_skip_test(test_name):
-        pytest.skip(f"⏭️ Skipping already completed test: {test_name}")
+        pytest.skip(f"SKIP: already completed test: {test_name}")
 
     if checkpoint_manager.should_checkpoint():
         checkpoint_summary = checkpoint_manager.trigger_45min_checkpoint()
         # Print a dedicated marker line that the Jenkinsfile grep can reliably extract
         print(f"JENKINS_CHECKPOINT_ID={checkpoint_summary['checkpoint_id']}", flush=True)
         pytest.exit(
-            f"\n⏰ 45-minute checkpoint reached. "
+            f"\nCHECKPOINT: 45-minute checkpoint reached. "
             f"Saved checkpoint {checkpoint_summary['checkpoint_id']} with "
             f"{checkpoint_summary['tests_completed']} completed tests.",
             returncode=0,
@@ -139,7 +139,7 @@ def checkpoint_test_handler(request, checkpoint_manager):
 
     stop_message = _read_stop_testing_message()
     if stop_message:
-        pytest.exit(f"\n🛑 {stop_message}", returncode=1)
+        pytest.exit(f"\nSTOP: {stop_message}", returncode=1)
 
     if hasattr(request.node, "rep_call") and request.node.rep_call.passed:
         checkpoint_manager.mark_test_complete(test_name)
@@ -178,7 +178,7 @@ def pytest_collection_modifyitems(config, items):
     items[:] = selected_items
     config.hook.pytest_deselected(items=deselected_items)
     print(
-        f"\n🧪 Limiting pytest run to first {run_limit} collected tests "
+        f"\nINFO: Limiting pytest run to first {run_limit} collected tests "
         f"(deselected {len(deselected_items)} test(s))."
     )
 
