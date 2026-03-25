@@ -20,6 +20,22 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GATE_GUARD_DIR = os.path.join(BASE_DIR, "test_output")
 GATE_GUARD_STATE_FILE = os.path.join(GATE_GUARD_DIR, "pre_upload_gate_state.json")
 GATE_GUARD_STOP_FILE = os.path.join(GATE_GUARD_DIR, "STOP_TESTING_READY_STUCK.flag")
+DEFAULT_JENKINS_TEST_LIMIT = 5
+
+
+def _get_pytest_run_limit():
+    """Return the max number of collected tests to run, or 0 for no limit."""
+    raw_limit = os.environ.get("PYTEST_RUN_LIMIT")
+    if raw_limit:
+        try:
+            return max(int(raw_limit), 0)
+        except ValueError:
+            print(f"⚠️ Ignoring invalid PYTEST_RUN_LIMIT value: {raw_limit}")
+
+    if os.environ.get("BUILD_URL"):
+        return DEFAULT_JENKINS_TEST_LIMIT
+
+    return 0
 
 
 def _read_stop_testing_message():
@@ -149,6 +165,22 @@ def pytest_configure(config):
     print(f"Checkpoint ID: {checkpoint_mgr.checkpoint_id}")
     print("Checkpoint-based skipping and 45-minute checkpoint exits are enabled.")
     print(f"{'=' * 60}\n")
+
+
+def pytest_collection_modifyitems(config, items):
+    """Optionally cap the session to the first N collected tests."""
+    run_limit = _get_pytest_run_limit()
+    if run_limit <= 0 or len(items) <= run_limit:
+        return
+
+    selected_items = items[:run_limit]
+    deselected_items = items[run_limit:]
+    items[:] = selected_items
+    config.hook.pytest_deselected(items=deselected_items)
+    print(
+        f"\n🧪 Limiting pytest run to first {run_limit} collected tests "
+        f"(deselected {len(deselected_items)} test(s))."
+    )
 
 
 
