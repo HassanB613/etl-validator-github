@@ -9,6 +9,28 @@ import pyarrow.parquet as pq
 import logging
 import os
 import math
+import sys
+
+
+def _configure_console_encoding() -> None:
+    """Ensure console output can safely print Unicode (e.g., emoji) on Windows."""
+    if os.name != 'nt':
+        return
+
+    for stream_name in ('stdout', 'stderr'):
+        stream = getattr(sys, stream_name, None)
+        if stream is None:
+            continue
+        reconfigure = getattr(stream, 'reconfigure', None)
+        if callable(reconfigure):
+            try:
+                reconfigure(encoding='utf-8', errors='replace')
+            except Exception:
+                # Best effort only; do not block execution if stream cannot be reconfigured.
+                pass
+
+
+_configure_console_encoding()
 
 try:
     from tqdm import tqdm
