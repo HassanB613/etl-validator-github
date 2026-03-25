@@ -1,4 +1,5 @@
 import os
+import sys
 import subprocess
 from datetime import datetime, timedelta, timezone
 import json
@@ -15,6 +16,21 @@ import random  # Add this import for random choice
 import re  # Add this import for regex
 from botocore.exceptions import ClientError
 import pyodbc  # Add this for SQL Server database validation
+
+
+def _configure_console_encoding():
+    """Avoid UnicodeEncodeError on Windows Jenkins consoles (cp1252)."""
+    if os.name != "nt":
+        return
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            # Older stream wrappers may not support reconfigure.
+            pass
+
+
+_configure_console_encoding()
 
 # Optional import for Allure reporting
 try:

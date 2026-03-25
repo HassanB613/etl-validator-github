@@ -1,6 +1,21 @@
 import pyodbc
 import configparser
 import os
+import sys
+
+
+def _configure_console_encoding():
+    """Avoid UnicodeEncodeError on Windows Jenkins consoles (cp1252)."""
+    if os.name != "nt":
+        return
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+
+_configure_console_encoding()
 
 # Read config
 config = configparser.ConfigParser()
