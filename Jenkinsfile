@@ -54,6 +54,11 @@ pipeline {
     environment {
         AWS_DEFAULT_REGION = "us-east-1"
         TARGET_ROLE = "arn:aws:iam::448049811908:role/mtfpm-test-automation-execution-role"
+        ETL_BUCKET = "mtfpm-dev2-s3-mtfdmstaging-us-east-1"
+        ETL_GLUE_JOB = "load-bank-file-stg-dev2"
+        CHECKPOINT_PREFIX = "test-checkpoints"
+        GLUE_OUTPUT_LOG_GROUP = "/aws-glue/jobs/output"
+        GLUE_ERROR_LOG_GROUP = "/aws-glue/jobs/error"
         CHECKPOINT_TRIGGERED = "false"
         NEXT_CHECKPOINT_ID = ""
         MAX_RESUME_COUNT = "6"
@@ -121,19 +126,39 @@ EOF
         stage('Verify AWS Access') {
             steps {
                 container('awscli') {
-                    echo 'Verifying S3 access using assumed target role credentials...'
+                    echo 'Verifying S3, Glue, and CloudWatch Logs access using assumed target role credentials...'
                     sh '''
+                        set -euo pipefail
                         . ${WORKSPACE}/.aws-env-vars.sh
 
                         echo "=== Current AWS Identity ==="
                         aws sts get-caller-identity
 
                         echo ""
-                        echo "=== Testing S3 Access ==="
-                        aws s3 ls | head -5
+                        echo "=== Testing S3 Prefix Access ==="
+                        aws s3api list-objects-v2 --bucket "$ETL_BUCKET" --prefix "bankfile/ready/" --max-items 1 > /dev/null
+                        aws s3api list-objects-v2 --bucket "$ETL_BUCKET" --prefix "bankfile/error/" --max-items 1 > /dev/null
+                        aws s3api list-objects-v2 --bucket "$ETL_BUCKET" --prefix "bankfile/archive/" --max-items 1 > /dev/null
+                        aws s3api list-objects-v2 --bucket "$ETL_BUCKET" --prefix "$CHECKPOINT_PREFIX/" --max-items 1 > /dev/null
 
                         echo ""
-                        echo "AWS access verified successfully"
+                        echo "=== Testing S3 Checkpoint Read/Write/Delete Access ==="
+                        PREFLIGHT_KEY="$CHECKPOINT_PREFIX/iam-preflight/${JOB_NAME//\//-}-${BUILD_NUMBER}.txt"
+                        printf 'jenkins aws preflight build=%s\n' "$BUILD_NUMBER" | aws s3 cp - "s3://$ETL_BUCKET/$PREFLIGHT_KEY"
+                        aws s3 cp "s3://$ETL_BUCKET/$PREFLIGHT_KEY" - > /dev/null
+                        aws s3 rm "s3://$ETL_BUCKET/$PREFLIGHT_KEY"
+
+                        echo ""
+                        echo "=== Testing Glue Read Access ==="
+                        aws glue get-job-runs --job-name "$ETL_GLUE_JOB" --max-results 1 > /dev/null
+
+                        echo ""
+                        echo "=== Testing CloudWatch Logs Read Access ==="
+                        aws logs describe-log-streams --log-group-name "$GLUE_OUTPUT_LOG_GROUP" --max-items 1 > /dev/null
+                        aws logs describe-log-streams --log-group-name "$GLUE_ERROR_LOG_GROUP" --max-items 1 > /dev/null
+
+                        echo ""
+                        echo "AWS access preflight verified successfully"
                     '''
                 }
             }

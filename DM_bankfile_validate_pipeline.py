@@ -32,6 +32,31 @@ def _configure_console_encoding():
 
 _configure_console_encoding()
 
+
+def _is_strict_aws_mode():
+    """Fail fast on AWS errors when running in CI or under pytest."""
+    return any(
+        os.environ.get(name)
+        for name in ("BUILD_URL", "PYTEST_CURRENT_TEST", "TEST_SEQUENCE_TOTAL")
+    ) or os.environ.get("ETL_VALIDATOR_STRICT_AWS", "").lower() in {"1", "true", "yes"}
+
+
+def _raise_or_warn_aws_error(operation, error, default=None):
+    """Raise on AWS failures in CI/tests, otherwise keep local exploratory runs soft."""
+    message = f"AWS operation failed during {operation}: {error}"
+    if _is_strict_aws_mode():
+        raise RuntimeError(message) from error
+    print(f"⚠️ {message}")
+    return default
+
+
+def _mark_pending_steps_failed(step_status, reason):
+    """Replace leftover pending steps with an explicit failure reason."""
+    failure_reason = f"Failed: {reason}"
+    for step, status in step_status.items():
+        if str(status).startswith("Pending"):
+            step_status[step] = failure_reason
+
 # Optional import for Allure reporting
 try:
     import allure
@@ -966,7 +991,10 @@ def _to_epoch(dt_value):
 
 def get_ready_folder_files():
     """Return non-folder object keys currently in ready prefix."""
-    result = s3.list_objects_v2(Bucket=BUCKET, Prefix=S3_PREFIX + "/")
+    try:
+        result = s3.list_objects_v2(Bucket=BUCKET, Prefix=S3_PREFIX + "/")
+    except Exception as e:
+        return _raise_or_warn_aws_error("list ready-folder objects", e, default=[])
     return [obj["Key"] for obj in result.get("Contents", []) if not obj["Key"].endswith("/")]
 
 
@@ -983,8 +1011,7 @@ def get_glue_runs_since(job_name, min_started_epoch=None, max_results=25):
         runs.sort(key=lambda r: _to_epoch(r.get("StartedOn")) or 0, reverse=True)
         return runs
     except Exception as e:
-        print(f"⚠️ Could not fetch Glue runs: {e}")
-        return []
+        return _raise_or_warn_aws_error(f"fetch Glue runs for {job_name}", e, default=[])
 
 # --------------------
 # Step 2: Upload to S3
@@ -1057,8 +1084,7 @@ def upload_to_s3(file_path):
         s3.upload_file(file_path, BUCKET, s3_key)
         print(f"✅ Successfully uploaded to s3://{BUCKET}/{s3_key}")
     except Exception as e:
-        print(f"⚠️ S3 upload failed: {str(e)}")
-        print(f"ℹ️ Continuing without AWS operations. Please configure AWS credentials if S3 upload is required.")
+        _raise_or_warn_aws_error(f"upload {file_path} to {s3_key}", e)
     return {
         "s3_key": s3_key,
         "upload_started_epoch": upload_started_epoch,
@@ -1099,8 +1125,7 @@ def get_running_glue_job(job_name):
                 return run["Id"]
         return None
     except Exception as e:
-        print(f"⚠️ Could not check for running Glue jobs: {e}")
-        return None
+        return _raise_or_warn_aws_error(f"check running Glue jobs for {job_name}", e, default=None)
 
 def wait_for_glue_success(job_name, timeout=600, upload_started_epoch=None):
     """
@@ -1477,6 +1502,7 @@ def run_test_scenario(file_type, seed=None, rows=50):
         file_found = check_s3_file_exists_with_naming_convention(S3_PREFIX, timestamp)
         assert file_found, f"❌ {file_type.capitalize()} file not found in S3: {file_path}"
         print(f"✅ {file_type.capitalize()} file is present in S3.")
+        step_status["Step 3"] = "Passed"
 
         print(">>> Step 4: Trigger and monitor Glue job")
         glue_job_success, glue_run_id, glue_reason = wait_for_glue_success(
@@ -1544,6 +1570,7 @@ def run_test_scenario(file_type, seed=None, rows=50):
             assert file_absent, f"❌ {file_type.capitalize()} file still found in S3 ready folder: {timestamp}"
             print(f"✅ {file_type.capitalize()} file is no longer in the S3 ready folder.")
             ready_folder_empty_epoch = time.time()
+            step_status["Step 5"] = "Passed"
         except AssertionError as e:
             step_status["Step 5"] = f"Failed: {str(e)}"
             print(str(e))
@@ -1562,6 +1589,7 @@ def run_test_scenario(file_type, seed=None, rows=50):
                 time.sleep(15)
             assert file_in_archive, f"❌ {file_type.capitalize()} file not found in S3 archive folder: {timestamp}"
             print(f"✅ {file_type.capitalize()} file successfully moved to the archive folder.")
+            step_status["Step 6"] = "Passed"
         except AssertionError as e:
             step_status["Step 6"] = f"Failed: {str(e)}"
             print(str(e))
@@ -1650,10 +1678,10 @@ def run_test_scenario(file_type, seed=None, rows=50):
             print(f"{step}: {status}")
 
     except AssertionError as e:
+        _mark_pending_steps_failed(step_status, str(e))
         print(str(e))
     except Exception as e:
-        if step_status.get("Step 2", "") == "Passed":
-            step_status["Step 2"] = f"Failed: {e}"
+        _mark_pending_steps_failed(step_status, str(e))
         print(str(e))
     finally:
         # --- Download S3 evidence BEFORE TestRail reporting ---
@@ -1699,7 +1727,10 @@ def run_test_scenario(file_type, seed=None, rows=50):
                 "\n\nUnexpected parquet file(s) in error folder (expected CSV only):\n"
                 + "\n".join([f"- {key}" for key in unique_parquet_keys])
             )
-        overall_status = 5 if any("Failed" in str(status) for status in step_status.values()) else 1
+        overall_status = 5 if any(
+            str(status).startswith("Failed") or str(status).startswith("Pending")
+            for status in step_status.values()
+        ) else 1
         if overall_status == 5:
             print("❌ Overall Test Result: Failed")
         else:
@@ -2423,6 +2454,7 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
             step_status["Step 7"] = "Skipped (no Glue run ID available)"
 
     except Exception as e:
+        _mark_pending_steps_failed(step_status, str(e))
         print(str(e))
     finally:
         # --- Download S3 evidence BEFORE TestRail reporting ---
@@ -2463,7 +2495,10 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
                 "\n\nUnexpected parquet file(s) in error folder (expected CSV only):\n"
                 + "\n".join([f"- {key}" for key in unique_parquet_keys])
             )
-        overall_status = 5 if any("Failed" in str(status) for status in step_status.values()) else 1
+        overall_status = 5 if any(
+            str(status).startswith("Failed") or str(status).startswith("Pending")
+            for status in step_status.values()
+        ) else 1
         if overall_status == 5:
             print("❌ Overall Test Result: Failed")
         else:

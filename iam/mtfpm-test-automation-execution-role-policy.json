@@ -1,0 +1,59 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ListRequiredEtlPrefixes",
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::mtfpm-dev2-s3-mtfdmstaging-us-east-1",
+      "Condition": {
+        "StringLike": {
+          "s3:prefix": [
+            "bankfile/ready/",
+            "bankfile/ready/*",
+            "bankfile/error/",
+            "bankfile/error/*",
+            "bankfile/archive/",
+            "bankfile/archive/*",
+            "test-checkpoints/",
+            "test-checkpoints/*"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "ReadWriteRequiredEtlObjects",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/ready/*",
+        "arn:aws:s3:::mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/error/*",
+        "arn:aws:s3:::mtfpm-dev2-s3-mtfdmstaging-us-east-1/bankfile/archive/*",
+        "arn:aws:s3:::mtfpm-dev2-s3-mtfdmstaging-us-east-1/test-checkpoints/*"
+      ]
+    },
+    {
+      "Sid": "RunAndInspectGlueJob",
+      "Effect": "Allow",
+      "Action": [
+        "glue:GetJobRuns",
+        "glue:GetJobRun",
+        "glue:StartJobRun"
+      ],
+      "Resource": "arn:aws:glue:us-east-1:448049811908:job/load-bank-file-stg-dev2"
+    },
+    {
+      "Sid": "ReadGlueCloudWatchLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:DescribeLogStreams",
+        "logs:GetLogEvents"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
