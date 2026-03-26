@@ -143,7 +143,8 @@ EOF
 
                         echo ""
                         echo "=== Testing S3 Checkpoint Read/Write/Delete Access ==="
-                        PREFLIGHT_KEY="$CHECKPOINT_PREFIX/iam-preflight/${JOB_NAME//\//-}-${BUILD_NUMBER}.txt"
+                        SAFE_JOB_NAME=$(printf '%s' "$JOB_NAME" | tr '/' '-')
+                        PREFLIGHT_KEY="$CHECKPOINT_PREFIX/iam-preflight/${SAFE_JOB_NAME}-${BUILD_NUMBER}.txt"
                         printf 'jenkins aws preflight build=%s\n' "$BUILD_NUMBER" | aws s3 cp - "s3://$ETL_BUCKET/$PREFLIGHT_KEY"
                         aws s3 cp "s3://$ETL_BUCKET/$PREFLIGHT_KEY" - > /dev/null
                         aws s3 rm "s3://$ETL_BUCKET/$PREFLIGHT_KEY"
@@ -208,7 +209,25 @@ EOF
                 container('python') {
                     echo 'Running tests with Allure reporting...'
                     sh '''#!/bin/bash
+                        set -euo pipefail
+
+                        if [ ! -f "${WORKSPACE}/.aws-env-vars.sh" ]; then
+                            echo "Missing ${WORKSPACE}/.aws-env-vars.sh; target role credentials were not prepared."
+                            exit 1
+                        fi
+
                         . ${WORKSPACE}/.aws-env-vars.sh
+
+                        if [ -z "${AWS_ACCESS_KEY_ID:-}" ] || [ -z "${AWS_SECRET_ACCESS_KEY:-}" ] || [ -z "${AWS_SESSION_TOKEN:-}" ]; then
+                            echo "Assumed-role AWS credentials are missing in Test stage environment."
+                            exit 1
+                        fi
+
+                        echo "=== Python Stage AWS Identity ==="
+                        python3 - <<'PY'
+import boto3
+print(boto3.client('sts').get_caller_identity())
+PY
 
                         # Create allure-results directory with proper permissions
                         mkdir -p ${WORKSPACE}/allure-results
