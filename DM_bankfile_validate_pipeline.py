@@ -80,6 +80,11 @@ ARCHIVE_PREFIX_2 = "bankfile/archive/2025/07"  # Dev2 archive prefix
 ERROR_CSV_PREFIX = "bankfile/error/"
 ENV_SUFFIX = "dev2"
 
+try:
+    GLUE_JOB_TIMEOUT_SECONDS = int(os.environ.get("GLUE_JOB_TIMEOUT_SECONDS", "1800"))
+except ValueError:
+    GLUE_JOB_TIMEOUT_SECONDS = 1800
+
 s3 = boto3.client("s3")
 glue = boto3.client("glue", region_name="us-east-1")
 logs = boto3.client("logs", region_name="us-east-1")
@@ -281,6 +286,26 @@ def refresh_aws_credentials():
         print(f"❌ Failed to refresh credentials: {e}")
         return False
 
+
+def ensure_fresh_aws_credentials(min_remaining_minutes: int = 15):
+    """
+    Refresh credentials immediately when the current token is too close to expiry.
+    This is required because each pytest case runs a fresh Python process.
+    """
+    expiry_time = get_credential_expiry_time()
+    if not expiry_time:
+        return False
+
+    remaining_minutes = (expiry_time - datetime.now(timezone.utc)).total_seconds() / 60
+    if remaining_minutes >= min_remaining_minutes:
+        return True
+
+    print(
+        f"⚠️ AWS credentials only have {remaining_minutes:.1f} minutes remaining; "
+        "refreshing before test execution..."
+    )
+    return refresh_aws_credentials()
+
 def _credential_refresh_worker():
     """Background worker that refreshes credentials every 50 minutes."""
     while not _credential_refresh_stop.is_set():
@@ -295,6 +320,9 @@ def _credential_refresh_worker():
 def start_credential_refresh():
     """Start the periodic credential refresh background thread (every 50 minutes)."""
     global _credential_refresh_thread
+
+    # Refresh immediately if this test process starts near credential expiry.
+    ensure_fresh_aws_credentials(min_remaining_minutes=15)
     
     if _credential_refresh_thread and _credential_refresh_thread.is_alive():
         print("ℹ️ Credential refresh thread already running")
@@ -1221,13 +1249,16 @@ def get_running_glue_job(job_name):
     except Exception as e:
         return _raise_or_warn_aws_error(f"check running Glue jobs for {job_name}", e, default=None)
 
-def wait_for_glue_success(job_name, timeout=600, upload_started_epoch=None):
+def wait_for_glue_success(job_name, timeout=None, upload_started_epoch=None):
     """
     Wait for Glue job to succeed. First checks if job is already running (auto-triggered by S3),
     if so, monitors that run. Otherwise starts a new run.
     
     Returns tuple: (success: bool, run_id: str or None, reason: str)
     """
+    if timeout is None:
+        timeout = GLUE_JOB_TIMEOUT_SECONDS
+
     run_id = None
     run_reason = ""
     correlation_floor = (upload_started_epoch - 2) if upload_started_epoch else None
@@ -2690,6 +2721,9 @@ def run_invalid_values_scenario(invalid_values, rows=50, formats=["csv"], seed=N
     output_dir = f"./test_output/invalid_values_{timestamp}"
     os.makedirs(output_dir, exist_ok=True)
     
+    # Each pytest case launches a new process; refresh immediately if token is near expiry.
+    ensure_fresh_aws_credentials(min_remaining_minutes=15)
+
     # Check credential expiry at the start of test
     if check_credential_expiry(buffer_minutes=10):
         if os.environ.get("ETL_CHECKPOINT_ENABLED", "").lower() in {"1", "true", "yes"}:
