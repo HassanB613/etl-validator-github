@@ -20,7 +20,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GATE_GUARD_DIR = os.path.join(BASE_DIR, "test_output")
 GATE_GUARD_STATE_FILE = os.path.join(GATE_GUARD_DIR, "pre_upload_gate_state.json")
 GATE_GUARD_STOP_FILE = os.path.join(GATE_GUARD_DIR, "STOP_TESTING_READY_STUCK.flag")
-DEFAULT_JENKINS_TEST_LIMIT = 5
+DEFAULT_JENKINS_TEST_LIMIT = 0
+CHECKPOINTS_ENABLED = False
 
 
 def _get_pytest_run_limit():
@@ -106,19 +107,20 @@ def checkpoint_test_handler(request, checkpoint_manager):
     if stop_message:
         pytest.exit(f"\nSTOP: {stop_message}", returncode=1)
 
-    if checkpoint_manager.should_skip_test(test_name):
-        pytest.skip(f"SKIP: already completed test: {test_name}")
+    if CHECKPOINTS_ENABLED:
+        if checkpoint_manager.should_skip_test(test_name):
+            pytest.skip(f"SKIP: already completed test: {test_name}")
 
-    if checkpoint_manager.should_checkpoint():
-        checkpoint_summary = checkpoint_manager.trigger_45min_checkpoint()
-        # Print a dedicated marker line that the Jenkinsfile grep can reliably extract
-        print(f"JENKINS_CHECKPOINT_ID={checkpoint_summary['checkpoint_id']}", flush=True)
-        pytest.exit(
-            f"\nCHECKPOINT: 45-minute checkpoint reached. "
-            f"Saved checkpoint {checkpoint_summary['checkpoint_id']} with "
-            f"{checkpoint_summary['tests_completed']} completed tests.",
-            returncode=0,
-        )
+        if checkpoint_manager.should_checkpoint():
+            checkpoint_summary = checkpoint_manager.trigger_45min_checkpoint()
+            # Print a dedicated marker line that the Jenkinsfile grep can reliably extract
+            print(f"JENKINS_CHECKPOINT_ID={checkpoint_summary['checkpoint_id']}", flush=True)
+            pytest.exit(
+                f"\nCHECKPOINT: 45-minute checkpoint reached. "
+                f"Saved checkpoint {checkpoint_summary['checkpoint_id']} with "
+                f"{checkpoint_summary['tests_completed']} completed tests.",
+                returncode=0,
+            )
 
     if not hasattr(checkpoint_manager, "_testrail_total_tests"):
         checkpoint_manager._testrail_total_tests = sum(
@@ -141,7 +143,7 @@ def checkpoint_test_handler(request, checkpoint_manager):
     if stop_message:
         pytest.exit(f"\nSTOP: {stop_message}", returncode=1)
 
-    if hasattr(request.node, "rep_call") and request.node.rep_call.passed:
+    if CHECKPOINTS_ENABLED and hasattr(request.node, "rep_call") and request.node.rep_call.passed:
         checkpoint_manager.mark_test_complete(test_name)
 
 
@@ -160,10 +162,13 @@ def pytest_configure(config):
     checkpoint_mgr = get_checkpoint_manager()
 
     print(f"\n{'=' * 60}")
-    print(f"ETL Validator Test Suite (Checkpoint Enabled)")
+    print(f"ETL Validator Test Suite")
     print(f"{'=' * 60}")
-    print(f"Checkpoint ID: {checkpoint_mgr.checkpoint_id}")
-    print("Checkpoint-based skipping and 45-minute checkpoint exits are enabled.")
+    if CHECKPOINTS_ENABLED:
+        print(f"Checkpoint ID: {checkpoint_mgr.checkpoint_id}")
+        print("Checkpoint-based skipping and 45-minute checkpoint exits are enabled.")
+    else:
+        print("Checkpointing is disabled for this run.")
     print(f"{'=' * 60}\n")
 
 
