@@ -220,6 +220,100 @@ def check_credential_expiry(buffer_minutes: int = 10):
     
     return False
 
+# --------------------
+# Periodic Credential Refresh (for role chaining scenario)
+# --------------------
+# Global variables for credential refresh thread
+_credential_refresh_thread = None
+_credential_refresh_stop = threading.Event()
+
+def refresh_aws_credentials():
+    """
+    Re-assume the target role to get fresh credentials.
+    This handles the 1-hour session cap from role chaining (EC2 instance profile → target role).
+    Updates AWS environment variables and refreshes boto3 clients.
+    
+    Returns: True if successful, False otherwise
+    """
+    target_role = os.environ.get('TARGET_ROLE')
+    if not target_role:
+        print("⚠️ TARGET_ROLE not set. Cannot refresh credentials.")
+        return False
+    
+    try:
+        print("\n🔄 Refreshing AWS credentials by re-assuming target role...")
+        
+        # Call assume-role using subprocess (works on Windows and Linux)
+        cmd = [
+            'aws', 'sts', 'assume-role',
+            '--role-arn', target_role,
+            '--role-session-name', f'refresh-{datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")}',
+            '--duration-seconds', '43200',
+            '--query', 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken,Expiration]',
+            '--output', 'text'
+        ]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        creds = result.stdout.strip().split()
+        
+        if len(creds) != 4:
+            print(f"❌ Unexpected credential format: {result.stdout}")
+            return False
+        
+        access_key, secret_key, session_token, expiration = creds
+        
+        # Update environment variables
+        os.environ['AWS_ACCESS_KEY_ID'] = access_key
+        os.environ['AWS_SECRET_ACCESS_KEY'] = secret_key
+        os.environ['AWS_SESSION_TOKEN'] = session_token
+        os.environ['AWS_CREDENTIAL_EXPIRY'] = expiration
+        
+        # Refresh boto3 clients with new credentials
+        global s3, glue, logs
+        s3 = boto3.client("s3")
+        glue = boto3.client("glue", region_name="us-east-1")
+        logs = boto3.client("logs", region_name="us-east-1")
+        
+        print(f"✅ Credentials refreshed. New expiry: {expiration}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Failed to refresh credentials: {e}")
+        return False
+
+def _credential_refresh_worker():
+    """Background worker that refreshes credentials every 50 minutes."""
+    while not _credential_refresh_stop.is_set():
+        # Wait 50 minutes (3000 seconds)
+        if _credential_refresh_stop.wait(3000):
+            # Event was set, stop the thread
+            break
+        
+        # Refresh credentials
+        refresh_aws_credentials()
+
+def start_credential_refresh():
+    """Start the periodic credential refresh background thread (every 50 minutes)."""
+    global _credential_refresh_thread
+    
+    if _credential_refresh_thread and _credential_refresh_thread.is_alive():
+        print("ℹ️ Credential refresh thread already running")
+        return
+    
+    _credential_refresh_stop.clear()
+    _credential_refresh_thread = threading.Thread(target=_credential_refresh_worker, daemon=True)
+    _credential_refresh_thread.start()
+    print("✅ Started periodic credential refresh (every 50 minutes)")
+
+def stop_credential_refresh():
+    """Stop the periodic credential refresh background thread."""
+    global _credential_refresh_thread
+    
+    if _credential_refresh_thread and _credential_refresh_thread.is_alive():
+        _credential_refresh_stop.set()
+        _credential_refresh_thread.join(timeout=5)
+        print("✅ Stopped credential refresh thread")
+
 
 # Load SQL Server configuration for database validation
 sql_config = configparser.ConfigParser()
@@ -3179,4 +3273,10 @@ def main():
     return
 
 if __name__ == "__main__":
-    main()
+    # Start periodic credential refresh (handles role chaining 1-hour cap)
+    start_credential_refresh()
+    try:
+        main()
+    finally:
+        # Stop credential refresh on exit
+        stop_credential_refresh()
