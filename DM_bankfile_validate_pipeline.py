@@ -2598,9 +2598,12 @@ def run_invalid_values_scenario(invalid_values, rows=50, formats=["csv"], seed=N
     
     # Check credential expiry at the start of test
     if check_credential_expiry(buffer_minutes=10):
-        print("⚠️ Credentials expiring soon - saving checkpoint")
-        # The checkpoint will be saved by the test framework
-        raise SystemExit(1)
+        if os.environ.get("ETL_CHECKPOINT_ENABLED", "").lower() in {"1", "true", "yes"}:
+            print("⚠️ Credentials expiring soon - saving checkpoint")
+            # The checkpoint will be saved by the test framework
+            raise SystemExit(1)
+        else:
+            print("⚠️ Credentials expiring soon - continuing (checkpoint mode disabled)")
     
     output_filename = f"mtfdm_{ENV_SUFFIX}_dmbankdata_{timestamp}"
     # Ensure parquet output for sidecar (Excel/CSV) creation

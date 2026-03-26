@@ -84,7 +84,7 @@ pipeline {
 $(aws sts assume-role \
     --role-arn "$TARGET_ROLE" \
     --role-session-name "jenkins-${BUILD_NUMBER}" \
-    --duration-seconds 3600 \
+    --duration-seconds 43200 \
     --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken,Expiration]' \
     --output text)
 EOF
