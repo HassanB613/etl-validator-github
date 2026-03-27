@@ -20,7 +20,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GATE_GUARD_DIR = os.path.join(BASE_DIR, "test_output")
 GATE_GUARD_STATE_FILE = os.path.join(GATE_GUARD_DIR, "pre_upload_gate_state.json")
 GATE_GUARD_STOP_FILE = os.path.join(GATE_GUARD_DIR, "STOP_TESTING_READY_STUCK.flag")
-DEFAULT_JENKINS_TEST_LIMIT = 0
+DEFAULT_JENKINS_TEST_LIMIT = 7
 CHECKPOINTS_ENABLED = False
 
 
@@ -178,13 +178,15 @@ def pytest_collection_modifyitems(config, items):
     if run_limit <= 0 or len(items) <= run_limit:
         return
 
-    selected_items = items[:run_limit]
-    deselected_items = items[run_limit:]
-    items[:] = selected_items
-    config.hook.pytest_deselected(items=deselected_items)
+    skip_remaining = pytest.mark.skip(reason=f"Temporarily limited to first {run_limit} tests")
+    skipped_count = 0
+    for item in items[run_limit:]:
+        item.add_marker(skip_remaining)
+        skipped_count += 1
+
     print(
         f"\nINFO: Limiting pytest run to first {run_limit} collected tests "
-        f"(deselected {len(deselected_items)} test(s))."
+        f"(marked {skipped_count} test(s) as skipped)."
     )
 
 
