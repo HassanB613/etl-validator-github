@@ -1,6 +1,7 @@
 import os
 import sys
 import subprocess
+import csv
 from datetime import datetime, timedelta, timezone
 import json
 import boto3
@@ -232,6 +233,33 @@ def check_credential_expiry(buffer_minutes: int = 10):
 _credential_refresh_thread = None
 _credential_refresh_stop = threading.Event()
 
+
+def _assume_role_env(clear_aws_creds=False):
+    """Build subprocess environment for assume-role attempts."""
+    env = os.environ.copy()
+    if clear_aws_creds:
+        # Remove potentially expired temporary credentials so CLI can fall back
+        # to host/instance profile credentials.
+        for name in (
+            "AWS_ACCESS_KEY_ID",
+            "AWS_SECRET_ACCESS_KEY",
+            "AWS_SESSION_TOKEN",
+            "AWS_SECURITY_TOKEN",
+            "AWS_CREDENTIAL_EXPIRY",
+            "AWS_PROFILE",
+            "AWS_DEFAULT_PROFILE",
+        ):
+            env.pop(name, None)
+    return env
+
+
+def _parse_assume_role_creds(raw_output):
+    """Parse `aws sts assume-role --output text` credential tuple."""
+    parts = raw_output.strip().split()
+    if len(parts) != 4:
+        return None
+    return parts
+
 def refresh_aws_credentials():
     """
     Re-assume the target role to get fresh credentials.
@@ -245,46 +273,74 @@ def refresh_aws_credentials():
         print("⚠️ TARGET_ROLE not set. Cannot refresh credentials.")
         return False
     
-    try:
-        print("\n🔄 Refreshing AWS credentials by re-assuming target role...")
-        
-        # Call assume-role using subprocess (works on Windows and Linux)
-        cmd = [
-            'aws', 'sts', 'assume-role',
-            '--role-arn', target_role,
-            '--role-session-name', f'refresh-{datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")}',
-            '--duration-seconds', '43200',
-            '--query', 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken,Expiration]',
-            '--output', 'text'
-        ]
-        
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        creds = result.stdout.strip().split()
-        
-        if len(creds) != 4:
-            print(f"❌ Unexpected credential format: {result.stdout}")
-            return False
-        
-        access_key, secret_key, session_token, expiration = creds
-        
-        # Update environment variables
-        os.environ['AWS_ACCESS_KEY_ID'] = access_key
-        os.environ['AWS_SECRET_ACCESS_KEY'] = secret_key
-        os.environ['AWS_SESSION_TOKEN'] = session_token
-        os.environ['AWS_CREDENTIAL_EXPIRY'] = expiration
-        
-        # Refresh boto3 clients with new credentials
-        global s3, glue, logs
-        s3 = boto3.client("s3")
-        glue = boto3.client("glue", region_name="us-east-1")
-        logs = boto3.client("logs", region_name="us-east-1")
-        
-        print(f"✅ Credentials refreshed. New expiry: {expiration}")
-        return True
-        
-    except Exception as e:
-        print(f"❌ Failed to refresh credentials: {e}")
-        return False
+    print("\n🔄 Refreshing AWS credentials by re-assuming target role...")
+
+    # Call assume-role using subprocess (works on Windows and Linux)
+    cmd = [
+        'aws', 'sts', 'assume-role',
+        '--role-arn', target_role,
+        '--role-session-name', f'refresh-{datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")}',
+        '--duration-seconds', '43200',
+        '--query', 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken,Expiration]',
+        '--output', 'text'
+    ]
+
+    # Attempt 1: current process env
+    # Attempt 2: clear AWS env creds so CLI can use instance profile creds
+    attempts = [
+        ("current environment", False),
+        ("instance profile fallback", True),
+    ]
+    last_error = ""
+
+    for attempt_label, clear_creds in attempts:
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=False,
+                env=_assume_role_env(clear_aws_creds=clear_creds),
+            )
+            if result.returncode != 0:
+                stderr_text = (result.stderr or "").strip()
+                stdout_text = (result.stdout or "").strip()
+                last_error = (
+                    f"{attempt_label} failed (exit={result.returncode})"
+                    f"; stderr={stderr_text or 'N/A'}"
+                    f"; stdout={stdout_text or 'N/A'}"
+                )
+                print(f"⚠️ Credential refresh {attempt_label} failed.")
+                continue
+
+            creds = _parse_assume_role_creds(result.stdout)
+            if not creds:
+                last_error = f"{attempt_label} returned unexpected output: {result.stdout}"
+                print(f"⚠️ Credential refresh {attempt_label} returned unexpected format.")
+                continue
+
+            access_key, secret_key, session_token, expiration = creds
+
+            # Update environment variables
+            os.environ['AWS_ACCESS_KEY_ID'] = access_key
+            os.environ['AWS_SECRET_ACCESS_KEY'] = secret_key
+            os.environ['AWS_SESSION_TOKEN'] = session_token
+            os.environ['AWS_CREDENTIAL_EXPIRY'] = expiration
+
+            # Refresh boto3 clients with new credentials
+            global s3, glue, logs
+            s3 = boto3.client("s3")
+            glue = boto3.client("glue", region_name="us-east-1")
+            logs = boto3.client("logs", region_name="us-east-1")
+
+            print(f"✅ Credentials refreshed. New expiry: {expiration}")
+            return True
+        except Exception as e:
+            last_error = f"{attempt_label} exception: {e}"
+            print(f"⚠️ Credential refresh {attempt_label} raised an exception.")
+
+    print(f"❌ Failed to refresh credentials: {last_error}")
+    return False
 
 
 def ensure_fresh_aws_credentials(min_remaining_minutes: int = 15):
@@ -744,6 +800,148 @@ def get_error_count_from_db(ins_batch_id):
     finally:
         conn.close()
 
+
+def _normalize_error_desc(text):
+    """Normalize error text to make comparisons robust to spacing differences."""
+    return re.sub(r"\s+", " ", str(text or "")).strip().strip(",")
+
+
+def parse_error_csv_by_payee(local_path):
+    """
+    Parse error CSV and return PayeeId -> list[ERROR_DESC] mapping.
+    Supports pipe-delimited format: FILENAME|PayeeId|ERROR_DESC.
+    """
+    payee_to_errors = {}
+    try:
+        with open(local_path, "r", encoding="utf-8", errors="ignore", newline="") as f:
+            reader = csv.DictReader(f, delimiter="|")
+            if not reader.fieldnames:
+                print("❌ Error CSV appears empty or missing header.")
+                return {}
+
+            headers = {h.strip().lower(): h for h in reader.fieldnames if h}
+            payee_col = headers.get("payeeid")
+            error_col = headers.get("error_desc")
+            if not payee_col or not error_col:
+                print(
+                    "❌ Error CSV is missing required columns. "
+                    f"Found headers: {reader.fieldnames}"
+                )
+                return {}
+
+            for row in reader:
+                payee_id = str(row.get(payee_col, "")).strip()
+                error_desc = str(row.get(error_col, "")).strip()
+                if not payee_id:
+                    continue
+                payee_to_errors.setdefault(payee_id, []).append(error_desc)
+
+    except Exception as e:
+        print(f"❌ Failed to parse error CSV by payee: {e}")
+        return {}
+
+    return payee_to_errors
+
+
+def get_error_descs_from_db_by_payee(ins_batch_id, payee_ids):
+    """
+    Fetch ERROR_DESC values from PAYEE_ERROR_STG for given INS_BATCH_ID and payee IDs.
+    Returns PayeeId -> list[ERROR_DESC], or None on DB/query failure.
+    """
+    if not payee_ids:
+        return {}
+
+    conn = get_sql_connection()
+    if not conn:
+        return None
+
+    try:
+        cursor = conn.cursor()
+
+        payee_column = None
+        for candidate in ("PAYEE_ID", "PAYEEID"):
+            try:
+                probe_query = f"""
+                    SELECT TOP 1 {candidate}
+                    FROM [MTFDM_STG].[PAYEE_ERROR_STG]
+                    WHERE INS_BATCH_ID = ?
+                """
+                cursor.execute(probe_query, (ins_batch_id,))
+                cursor.fetchone()
+                payee_column = candidate
+                break
+            except Exception:
+                continue
+
+        if not payee_column:
+            print("❌ Could not determine PayeeId column in PAYEE_ERROR_STG (tried PAYEE_ID, PAYEEID).")
+            return None
+
+        placeholders = ",".join(["?"] * len(payee_ids))
+        query = f"""
+            SELECT CAST({payee_column} AS VARCHAR(255)) AS PAYEE_ID, CAST(ERROR_DESC AS VARCHAR(MAX)) AS ERROR_DESC
+            FROM [MTFDM_STG].[PAYEE_ERROR_STG]
+            WHERE INS_BATCH_ID = ?
+              AND {payee_column} IN ({placeholders})
+        """
+
+        params = [ins_batch_id] + list(payee_ids)
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+
+        db_map = {}
+        for row in rows:
+            payee_id = str(row[0]).strip() if row[0] is not None else ""
+            error_desc = str(row[1]).strip() if row[1] is not None else ""
+            if not payee_id:
+                continue
+            db_map.setdefault(payee_id, []).append(error_desc)
+
+        return db_map
+    except Exception as e:
+        print(f"❌ Error querying PAYEE_ERROR_STG ERROR_DESC by payee: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+def compare_csv_and_db_error_desc(csv_payee_errors, db_payee_errors):
+    """
+    Compare CSV and DB error descriptions per payee.
+    Returns (is_match, mismatch_list, missing_in_db, missing_in_csv).
+    """
+    mismatch_list = []
+    missing_in_db = []
+    missing_in_csv = []
+
+    csv_payees = set(csv_payee_errors.keys())
+    db_payees = set(db_payee_errors.keys())
+
+    for payee in sorted(csv_payees - db_payees):
+        missing_in_db.append(payee)
+
+    for payee in sorted(db_payees - csv_payees):
+        missing_in_csv.append(payee)
+
+    for payee in sorted(csv_payees & db_payees):
+        csv_descs = csv_payee_errors.get(payee, [])
+        db_descs = db_payee_errors.get(payee, [])
+        normalized_db = {_normalize_error_desc(x) for x in db_descs}
+
+        for csv_desc in csv_descs:
+            normalized_csv = _normalize_error_desc(csv_desc)
+            if normalized_csv not in normalized_db:
+                mismatch_list.append(
+                    {
+                        "payee_id": payee,
+                        "csv_error_desc": csv_desc,
+                        "db_error_desc_options": db_descs,
+                    }
+                )
+
+    is_match = not mismatch_list and not missing_in_db
+    return is_match, mismatch_list, missing_in_db, missing_in_csv
+
 def get_csv_data_row_count(local_path):
     """
     Count data rows in an error CSV by physical lines:
@@ -939,6 +1137,10 @@ def validate_error_file_with_database(glue_run_id, local_evidence_dir, run_start
         "db_error_count": None,
         "csv_error_count": None,
         "csv_file": None,
+        "error_desc_match": False,
+        "error_desc_mismatches": [],
+        "payees_missing_in_db": [],
+        "payees_missing_in_csv": [],
         "unexpected_parquet_files": [],
         "match": False
     }
@@ -1008,6 +1210,7 @@ def validate_error_file_with_database(glue_run_id, local_evidence_dir, run_start
             if db_error_count == 0:
                 print("✅ Row counts MATCH: DB=0, CSV=0 (no error CSV generated)")
                 details["csv_error_count"] = 0
+                details["error_desc_match"] = True
                 details["match"] = True
                 return True, details
             if attempt < max_attempts:
@@ -1017,9 +1220,57 @@ def validate_error_file_with_database(glue_run_id, local_evidence_dir, run_start
             print("❌ Could not download error CSV. Validation failed.")
             return False, details
 
-        # Step 4: Compare counts
+        # Step 4: Compare error descriptions per payee between CSV and DB
+        csv_payee_errors = parse_error_csv_by_payee(csv_path)
+        if not csv_payee_errors and csv_error_count > 0:
+            if attempt < max_attempts:
+                print(f"⏳ CSV parsed with no payee errors yet. Retrying in {wait_seconds}s...")
+                time.sleep(wait_seconds)
+                continue
+            print("❌ Could not parse payee error details from CSV. Validation failed.")
+            return False, details
+
+        db_payee_errors = get_error_descs_from_db_by_payee(ins_batch_id, list(csv_payee_errors.keys()))
+        if db_payee_errors is None:
+            if attempt < max_attempts:
+                print(f"⏳ DB payee error descriptions not available yet. Retrying in {wait_seconds}s...")
+                time.sleep(wait_seconds)
+                continue
+            print("❌ Could not retrieve payee ERROR_DESC details from database. Validation failed.")
+            return False, details
+
+        error_desc_match, mismatches, missing_in_db, missing_in_csv = compare_csv_and_db_error_desc(
+            csv_payee_errors,
+            db_payee_errors,
+        )
+        details["error_desc_match"] = error_desc_match
+        details["error_desc_mismatches"] = mismatches
+        details["payees_missing_in_db"] = missing_in_db
+        details["payees_missing_in_csv"] = missing_in_csv
+
+        if not error_desc_match:
+            print(
+                "❌ ERROR_DESC mismatch between CSV and PAYEE_ERROR_STG. "
+                f"Mismatches={len(mismatches)}, MissingInDb={len(missing_in_db)}"
+            )
+            if missing_in_db:
+                print(f"   Missing payees in DB: {missing_in_db[:10]}")
+            for mismatch in mismatches[:5]:
+                print(
+                    "   Payee "
+                    f"{mismatch['payee_id']}: CSV='{mismatch['csv_error_desc']}' "
+                    f"DB options={mismatch['db_error_desc_options']}"
+                )
+            if attempt < max_attempts:
+                print(f"⏳ Error descriptions may still be settling. Retrying in {wait_seconds}s...")
+                time.sleep(wait_seconds)
+                continue
+            return False, details
+
+        # Step 5: Compare counts
         if db_error_count == csv_error_count:
             print(f"✅ Row counts MATCH: DB={db_error_count}, CSV={csv_error_count}")
+            print("✅ ERROR_DESC values MATCH per payee between CSV and PAYEE_ERROR_STG")
             details["match"] = True
             return True, details
 
