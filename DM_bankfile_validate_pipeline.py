@@ -1282,6 +1282,48 @@ def validate_error_file_with_database(glue_run_id, local_evidence_dir, run_start
     details["match"] = False
     return False, details
 
+
+def build_error_file_validation_allure_text(db_details):
+    """Build a detailed text payload for Allure error-file validation attachments."""
+    db_error_count = db_details.get("db_error_count", "N/A")
+    csv_error_count = db_details.get("csv_error_count", "N/A")
+    csv_file = db_details.get("csv_file")
+    csv_name = os.path.basename(csv_file) if csv_file else "N/A"
+
+    mismatches = db_details.get("error_desc_mismatches") or []
+    missing_in_db = db_details.get("payees_missing_in_db") or []
+    missing_in_csv = db_details.get("payees_missing_in_csv") or []
+    unexpected_parquet = db_details.get("unexpected_parquet_files") or []
+
+    lines = [
+        f"DB Error Count: {db_error_count}",
+        f"CSV Error Count: {csv_error_count}",
+        f"Error File: {csv_name}",
+        f"Error Desc Match: {db_details.get('error_desc_match', False)}",
+        f"Error Desc Mismatches: {len(mismatches)}",
+        f"Payees Missing In DB: {len(missing_in_db)}",
+        f"Payees Missing In CSV: {len(missing_in_csv)}",
+        f"Unexpected Parquet Files: {len(unexpected_parquet)}",
+    ]
+
+    if missing_in_db:
+        lines.append(f"Missing In DB Sample: {missing_in_db[:10]}")
+    if missing_in_csv:
+        lines.append(f"Missing In CSV Sample: {missing_in_csv[:10]}")
+    if unexpected_parquet:
+        lines.append(f"Unexpected Parquet Sample: {unexpected_parquet[:10]}")
+    if mismatches:
+        lines.append("Mismatch Samples:")
+        for mismatch in mismatches[:5]:
+            lines.append(
+                "- Payee "
+                f"{mismatch.get('payee_id')}: "
+                f"CSV='{mismatch.get('csv_error_desc')}' "
+                f"DB={mismatch.get('db_error_desc_options')}"
+            )
+
+    return "\n".join(lines)
+
 # --------------------
 # Step 1: Generate test files
 # --------------------
@@ -2020,11 +2062,7 @@ def run_test_scenario(file_type, seed=None, rows=50):
                 csv_name = os.path.basename(db_details.get("csv_file")) if db_details.get("csv_file") else "N/A"
                 if ALLURE_AVAILABLE:
                     allure.attach(
-                        (
-                            f"DB Error Count: {db_details.get('db_error_count', 'N/A')}\n"
-                            f"CSV Error Count: {db_details.get('csv_error_count', 'N/A')}\n"
-                            f"Error File: {csv_name}"
-                        ),
+                        build_error_file_validation_allure_text(db_details),
                         name="Step 8 - Error File Validation",
                         attachment_type=allure.attachment_type.TEXT,
                     )
@@ -2800,11 +2838,7 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
             csv_name = os.path.basename(db_details.get("csv_file")) if db_details.get("csv_file") else "N/A"
             if ALLURE_AVAILABLE:
                 allure.attach(
-                    (
-                        f"DB Error Count: {db_details.get('db_error_count', 'N/A')}\n"
-                        f"CSV Error Count: {db_details.get('csv_error_count', 'N/A')}\n"
-                        f"Error File: {csv_name}"
-                    ),
+                    build_error_file_validation_allure_text(db_details),
                     name="Step 7 - Error File Validation",
                     attachment_type=allure.attachment_type.TEXT,
                 )
