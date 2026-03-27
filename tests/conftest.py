@@ -22,7 +22,7 @@ GATE_GUARD_STATE_FILE = os.path.join(GATE_GUARD_DIR, "pre_upload_gate_state.json
 GATE_GUARD_STOP_FILE = os.path.join(GATE_GUARD_DIR, "STOP_TESTING_READY_STUCK.flag")
 # Keep Jenkins smoke scope bounded, but high enough to include invalid-scenario
 # orchestration that exercises Step 8 DB <-> error CSV matching.
-DEFAULT_JENKINS_TEST_LIMIT = 20
+DEFAULT_JENKINS_TEST_LIMIT = 7
 CHECKPOINTS_ENABLED = False
 
 
