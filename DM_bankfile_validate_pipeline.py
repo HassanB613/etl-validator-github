@@ -234,6 +234,11 @@ _credential_refresh_thread = None
 _credential_refresh_stop = threading.Event()
 
 
+def _is_assume_role_refresh_enabled():
+    """Enable role re-assumption only when explicitly requested."""
+    return os.environ.get("ETL_USE_ASSUME_ROLE_REFRESH", "").lower() in {"1", "true", "yes"}
+
+
 def _assume_role_env(clear_aws_creds=False):
     """Build subprocess environment for assume-role attempts."""
     env = os.environ.copy()
@@ -268,6 +273,10 @@ def refresh_aws_credentials():
     
     Returns: True if successful, False otherwise
     """
+    if not _is_assume_role_refresh_enabled():
+        print("ℹ️ Assume-role credential refresh is disabled (ETL_USE_ASSUME_ROLE_REFRESH not set).")
+        return False
+
     target_role = os.environ.get('TARGET_ROLE')
     if not target_role:
         print("⚠️ TARGET_ROLE not set. Cannot refresh credentials.")
@@ -376,6 +385,10 @@ def _credential_refresh_worker():
 def start_credential_refresh():
     """Start the periodic credential refresh background thread (every 50 minutes)."""
     global _credential_refresh_thread
+
+    if not _is_assume_role_refresh_enabled():
+        print("ℹ️ Skipping periodic assume-role refresh (Option A / instance-profile mode).")
+        return
 
     # Refresh immediately if this test process starts near credential expiry.
     ensure_fresh_aws_credentials(min_remaining_minutes=15)
@@ -3592,7 +3605,7 @@ def main():
     return
 
 if __name__ == "__main__":
-    # Start periodic credential refresh (handles role chaining 1-hour cap)
+    # Start periodic credential refresh only when assume-role mode is explicitly enabled.
     start_credential_refresh()
     try:
         main()

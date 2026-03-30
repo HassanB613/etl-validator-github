@@ -1,43 +1,6 @@
 pipeline {
-        agent {
-                kubernetes {
-                                                                                                yaml '''
-{
-    "apiVersion": "v1",
-    "kind": "Pod",
-    "spec": {
-        "serviceAccountName": "jenkins-role",
-        "restartPolicy": "Never",
-        "containers": [
-            {
-                "name": "python",
-                "image": "public.ecr.aws/docker/library/python:3.9",
-                "command": ["/bin/sh", "-c"],
-                "args": ["cat"],
-                "tty": true,
-                "resources": {
-                    "limits": {"cpu": "2000m", "memory": "2Gi"},
-                    "requests": {"cpu": "1000m", "memory": "1Gi"}
-                }
-            },
-            {
-                "name": "awscli",
-                "image": "public.ecr.aws/aws-cli/aws-cli:latest",
-                "command": ["cat"],
-                "tty": true
-            },
-            {
-                "name": "java",
-                "image": "public.ecr.aws/docker/library/eclipse-temurin:17-jre",
-                "command": ["/bin/sh", "-c"],
-                "args": ["cat"],
-                "tty": true
-            }
-        ]
-    }
-}
-'''
-        }
+    agent {
+        label 'smoke-test-ec2-agent'
     }
     
     // Allure tool configured in Jenkins Global Tool Configuration
@@ -53,7 +16,6 @@ pipeline {
 
     environment {
         AWS_DEFAULT_REGION = "us-east-1"
-        TARGET_ROLE = "arn:aws:iam::448049811908:role/mtfpm-test-automation-execution-role"
         ETL_BUCKET = "mtfpm-dev2-s3-mtfdmstaging-us-east-1"
         ETL_GLUE_JOB = "load-bank-file-stg-dev2"
         CHECKPOINT_PREFIX = "test-checkpoints"
@@ -67,101 +29,75 @@ pipeline {
     stages {
         stage('Verify Initial Identity') {
             steps {
-                container('awscli') {
-                    echo 'Verifying AWS identity (using pod service account via IRSA)...'
-                    sh 'aws sts get-caller-identity'
-                }
-            }
-        }
+                echo 'Verifying AWS identity from EC2 instance profile...'
+                powershell '''
+                    $ErrorActionPreference = "Stop"
 
-        stage('Assume Target Role') {
-            steps {
-                container('awscli') {
-                    echo 'Assuming target execution role...'
-                    sh '''
-                        set -e
-                                                read ACCESS_KEY SECRET_KEY SESSION_TOKEN EXPIRATION <<EOF
-$(aws sts assume-role \
-    --role-arn "$TARGET_ROLE" \
-    --role-session-name "jenkins-${BUILD_NUMBER}" \
-    --duration-seconds 43200 \
-    --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken,Expiration]' \
-    --output text)
-EOF
+                    $callerArn = aws sts get-caller-identity --query Arn --output text
+                    $refreshRaw = "$env:ETL_USE_ASSUME_ROLE_REFRESH"
+                    if ([string]::IsNullOrWhiteSpace($refreshRaw)) { $refreshRaw = "unset" }
+                    $refreshEnabled = @("1", "true", "yes") -contains $refreshRaw.ToLowerInvariant()
 
-                        cat > ${WORKSPACE}/.aws-env-vars.sh <<EOF
-export AWS_ACCESS_KEY_ID=$ACCESS_KEY
-export AWS_SECRET_ACCESS_KEY=$SECRET_KEY
-export AWS_SESSION_TOKEN=$SESSION_TOKEN
-export AWS_CREDENTIAL_EXPIRY=$EXPIRATION
-export AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION
-EOF
-
-                        chmod 600 ${WORKSPACE}/.aws-env-vars.sh
-                        . ${WORKSPACE}/.aws-env-vars.sh
-                        aws sts get-caller-identity
-                    '''
-                }
+                    Write-Host "[PREFLIGHT] Node=$env:NODE_NAME | CallerArn=$callerArn | AssumeRoleRefreshEnabled=$refreshEnabled (ETL_USE_ASSUME_ROLE_REFRESH=$refreshRaw)"
+                '''
             }
         }
         
         stage('Build') {
             steps {
-                container('python') {
-                    echo 'Building...'
-                    echo 'Installing Python dependencies...'
-                    sh 'python3 -m pip install -r requirements.txt'
-                    echo 'Installing ODBC drivers...'
-                    sh '''
-                        apt-get update -qq && apt-get install -y -q curl apt-transport-https gnupg
-                        curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg
-                        curl -fsSL https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list
-                        apt-get update -qq
-                        ACCEPT_EULA=Y apt-get install -y -q msodbcsql17 unixodbc-dev
-                    '''
-                }
+                echo 'Building on Windows EC2 agent...'
+                echo 'Installing Python dependencies...'
+                bat 'python -m pip install -r requirements.txt'
+                powershell '''
+                    $ErrorActionPreference = "Stop"
+                    $driver = Get-OdbcDriver | Where-Object { $_.Name -eq "ODBC Driver 17 for SQL Server" }
+                    if ($null -eq $driver) {
+                        Write-Error "ODBC Driver 17 for SQL Server is not installed on the EC2 agent."
+                    }
+                    Write-Host "ODBC Driver 17 for SQL Server is available."
+                '''
             }
         }
         
         stage('Verify AWS Access') {
             steps {
-                container('awscli') {
-                    echo 'Verifying S3, Glue, and CloudWatch Logs access using assumed target role credentials...'
-                    sh '''
-                        set -euo pipefail
-                        . ${WORKSPACE}/.aws-env-vars.sh
+                echo 'Verifying S3, Glue, and CloudWatch Logs access using EC2 instance profile credentials...'
+                powershell '''
+                    $ErrorActionPreference = "Stop"
 
-                        echo "=== Current AWS Identity ==="
-                        aws sts get-caller-identity
+                    Write-Host "=== Current AWS Identity ==="
+                    aws sts get-caller-identity
 
-                        echo ""
-                        echo "=== Testing S3 Prefix Access ==="
-                        aws s3api list-objects-v2 --bucket "$ETL_BUCKET" --prefix "bankfile/ready/" --max-items 1 > /dev/null
-                        aws s3api list-objects-v2 --bucket "$ETL_BUCKET" --prefix "bankfile/error/" --max-items 1 > /dev/null
-                        aws s3api list-objects-v2 --bucket "$ETL_BUCKET" --prefix "bankfile/archive/" --max-items 1 > /dev/null
-                        aws s3api list-objects-v2 --bucket "$ETL_BUCKET" --prefix "$CHECKPOINT_PREFIX/" --max-items 1 > /dev/null
+                    Write-Host ""
+                    Write-Host "=== Testing S3 Prefix Access ==="
+                    aws s3api list-objects-v2 --bucket "$env:ETL_BUCKET" --prefix "bankfile/ready/" --max-items 1 | Out-Null
+                    aws s3api list-objects-v2 --bucket "$env:ETL_BUCKET" --prefix "bankfile/error/" --max-items 1 | Out-Null
+                    aws s3api list-objects-v2 --bucket "$env:ETL_BUCKET" --prefix "bankfile/archive/" --max-items 1 | Out-Null
+                    aws s3api list-objects-v2 --bucket "$env:ETL_BUCKET" --prefix "$env:CHECKPOINT_PREFIX/" --max-items 1 | Out-Null
 
-                        echo ""
-                        echo "=== Testing S3 Checkpoint Read/Write/Delete Access ==="
-                        SAFE_JOB_NAME=$(printf '%s' "$JOB_NAME" | tr '/' '-')
-                        PREFLIGHT_KEY="$CHECKPOINT_PREFIX/iam-preflight/${SAFE_JOB_NAME}-${BUILD_NUMBER}.txt"
-                        printf 'jenkins aws preflight build=%s\n' "$BUILD_NUMBER" | aws s3 cp - "s3://$ETL_BUCKET/$PREFLIGHT_KEY"
-                        aws s3 cp "s3://$ETL_BUCKET/$PREFLIGHT_KEY" - > /dev/null
-                        aws s3 rm "s3://$ETL_BUCKET/$PREFLIGHT_KEY"
+                    Write-Host ""
+                    Write-Host "=== Testing S3 Checkpoint Read/Write/Delete Access ==="
+                    $safeJobName = "$env:JOB_NAME" -replace "/", "-"
+                    $preflightKey = "$env:CHECKPOINT_PREFIX/iam-preflight/$safeJobName-$env:BUILD_NUMBER.txt"
+                    $tmpFile = Join-Path $env:WORKSPACE "aws-preflight-$env:BUILD_NUMBER.txt"
+                    Set-Content -Path $tmpFile -Value "jenkins aws preflight build=$env:BUILD_NUMBER" -Encoding ascii
+                    aws s3 cp "$tmpFile" "s3://$env:ETL_BUCKET/$preflightKey" | Out-Null
+                    aws s3 cp "s3://$env:ETL_BUCKET/$preflightKey" "$tmpFile.verify" | Out-Null
+                    aws s3 rm "s3://$env:ETL_BUCKET/$preflightKey" | Out-Null
+                    Remove-Item -Force $tmpFile, "$tmpFile.verify" -ErrorAction SilentlyContinue
 
-                        echo ""
-                        echo "=== Testing Glue Read Access ==="
-                        aws glue get-job-runs --job-name "$ETL_GLUE_JOB" --max-results 1 > /dev/null
+                    Write-Host ""
+                    Write-Host "=== Testing Glue Read Access ==="
+                    aws glue get-job-runs --job-name "$env:ETL_GLUE_JOB" --max-results 1 | Out-Null
 
-                        echo ""
-                        echo "=== Testing CloudWatch Logs Read Access ==="
-                        aws logs describe-log-streams --log-group-name "$GLUE_OUTPUT_LOG_GROUP" --max-items 1 > /dev/null
-                        aws logs describe-log-streams --log-group-name "$GLUE_ERROR_LOG_GROUP" --max-items 1 > /dev/null
+                    Write-Host ""
+                    Write-Host "=== Testing CloudWatch Logs Read Access ==="
+                    aws logs describe-log-streams --log-group-name "$env:GLUE_OUTPUT_LOG_GROUP" --max-items 1 | Out-Null
+                    aws logs describe-log-streams --log-group-name "$env:GLUE_ERROR_LOG_GROUP" --max-items 1 | Out-Null
 
-                        echo ""
-                        echo "AWS access preflight verified successfully"
-                    '''
-                }
+                    Write-Host ""
+                    Write-Host "AWS access preflight verified successfully"
+                '''
             }
         }
 
@@ -206,90 +142,66 @@ EOF
         
         stage('Test') {
             steps {
-                container('python') {
-                    echo 'Running tests with Allure reporting...'
-                    sh '''#!/bin/bash
-                        set -euo pipefail
+                echo 'Running tests with Allure reporting...'
+                powershell '''
+                    $ErrorActionPreference = "Stop"
 
-                        if [ ! -f "${WORKSPACE}/.aws-env-vars.sh" ]; then
-                            echo "Missing ${WORKSPACE}/.aws-env-vars.sh; target role credentials were not prepared."
-                            exit 1
-                        fi
+                    Write-Host "=== Python Stage AWS Identity ==="
+                    python -c "import boto3; print(boto3.client('sts').get_caller_identity())"
 
-                        . ${WORKSPACE}/.aws-env-vars.sh
+                    $allureDir = Join-Path $env:WORKSPACE "allure-results"
+                    New-Item -ItemType Directory -Path $allureDir -Force | Out-Null
 
-                        if [ -z "${AWS_ACCESS_KEY_ID:-}" ] || [ -z "${AWS_SECRET_ACCESS_KEY:-}" ] || [ -z "${AWS_SESSION_TOKEN:-}" ]; then
-                            echo "Assumed-role AWS credentials are missing in Test stage environment."
-                            exit 1
-                        fi
+                    if ($env:CHECKPOINT_ID) {
+                        Write-Host "Resuming from CHECKPOINT_ID=$env:CHECKPOINT_ID"
+                    }
 
-                        echo "=== Python Stage AWS Identity ==="
-                        python3 - <<'PY'
-import boto3
-print(boto3.client('sts').get_caller_identity())
-PY
+                    $pytestLog = Join-Path $env:WORKSPACE "pytest-output.log"
+                    python -m pytest tests/ --alluredir="$allureDir" -v --tb=short 2>&1 | Tee-Object -FilePath $pytestLog
+                    $exitCode = $LASTEXITCODE
 
-                        # Create allure-results directory with proper permissions
-                        mkdir -p ${WORKSPACE}/allure-results
-                        chmod 777 ${WORKSPACE}/allure-results
+                    $checkpointHit = Select-String -Path $pytestLog -Pattern "45-minute checkpoint reached" -Quiet
+                    Set-Content -Path (Join-Path $env:WORKSPACE "checkpoint_triggered.txt") -Value ($checkpointHit.ToString().ToLowerInvariant()) -Encoding ascii
 
-                        # Propagate checkpoint ID into pytest process when resuming
-                        if [ -n "${CHECKPOINT_ID}" ]; then
-                            export CHECKPOINT_ID="${CHECKPOINT_ID}"
-                            echo "Resuming from CHECKPOINT_ID=${CHECKPOINT_ID}"
-                        fi
-                        
-                        # Run pytest - stream output live to console AND write to log file
-                        python3 -m pytest tests/ \
-                            --alluredir=${WORKSPACE}/allure-results \
-                            -v \
-                            --tb=short 2>&1 | tee ${WORKSPACE}/pytest-output.log
-                        EXIT_CODE=${PIPESTATUS[0]}
-
-
-                        # Detect checkpoint exit and extract checkpoint id
-                        CHECKPOINT_HIT=false
-                        CHECKPOINT_ID_FOUND=""
-                        if grep -q "45-minute checkpoint reached" ${WORKSPACE}/pytest-output.log; then
-                            CHECKPOINT_HIT=true
-                            # Primary: dedicated marker line printed by conftest.py
-                            CHECKPOINT_ID_FOUND=$(grep -oE 'JENKINS_CHECKPOINT_ID=[A-Za-z0-9_-]+' ${WORKSPACE}/pytest-output.log | cut -d= -f2 | tail -1)
-                            # Fallback: legacy pattern from pytest.exit() message
-                            if [ -z "$CHECKPOINT_ID_FOUND" ]; then
-                                CHECKPOINT_ID_FOUND=$(grep -oE 'Saved checkpoint [A-Za-z0-9_-]+' ${WORKSPACE}/pytest-output.log | awk '{print $3}' | tail -1)
-                            fi
-                        fi
-                        echo "$CHECKPOINT_HIT" > ${WORKSPACE}/checkpoint_triggered.txt
-                        if [ -n "$CHECKPOINT_ID_FOUND" ]; then
-                            echo "$CHECKPOINT_ID_FOUND" > ${WORKSPACE}/checkpoint_id.txt
-                        fi
-                        
-                        # Fix permissions on allure results for jenkins user
-                        chmod -R 777 ${WORKSPACE}/allure-results
-                        
-                        exit $EXIT_CODE
-                    '''
-
-                    script {
-                        def checkpointTriggered = fileExists("${env.WORKSPACE}/checkpoint_triggered.txt") &&
-                            readFile("${env.WORKSPACE}/checkpoint_triggered.txt").trim() == 'true'
-                        env.CHECKPOINT_TRIGGERED = checkpointTriggered ? 'true' : 'false'
-
-                        if (checkpointTriggered) {
-                            def checkpointId = ""
-                            if (fileExists("${env.WORKSPACE}/checkpoint_id.txt")) {
-                                checkpointId = readFile("${env.WORKSPACE}/checkpoint_id.txt").trim()
-                            }
-                            if (!checkpointId?.trim()) {
-                                checkpointId = params.CHECKPOINT_ID?.trim()
-                            }
-                            if (!checkpointId?.trim()) {
-                                error("45-minute checkpoint was reached but no checkpoint ID could be extracted from pytest-output.log. Check for JENKINS_CHECKPOINT_ID= marker in the log.")
-                            }
-                            env.NEXT_CHECKPOINT_ID = checkpointId.trim()
-                            currentBuild.description = "Checkpoint pause: ${env.NEXT_CHECKPOINT_ID} | resume ${params.RESUME_COUNT ?: '0'}/${env.MAX_RESUME_COUNT}"
-                            echo "Checkpoint pause detected. Next run will resume with CHECKPOINT_ID=${checkpointId.trim()}"
+                    if ($checkpointHit) {
+                        $checkpointId = ""
+                        $marker = Select-String -Path $pytestLog -Pattern "JENKINS_CHECKPOINT_ID=([A-Za-z0-9_-]+)" -AllMatches
+                        if ($marker.Matches.Count -gt 0) {
+                            $checkpointId = $marker.Matches[$marker.Matches.Count - 1].Groups[1].Value
                         }
+                        if (-not $checkpointId) {
+                            $legacy = Select-String -Path $pytestLog -Pattern "Saved checkpoint ([A-Za-z0-9_-]+)" -AllMatches
+                            if ($legacy.Matches.Count -gt 0) {
+                                $checkpointId = $legacy.Matches[$legacy.Matches.Count - 1].Groups[1].Value
+                            }
+                        }
+                        if ($checkpointId) {
+                            Set-Content -Path (Join-Path $env:WORKSPACE "checkpoint_id.txt") -Value $checkpointId -Encoding ascii
+                        }
+                    }
+
+                    exit $exitCode
+                '''
+
+                script {
+                    def checkpointTriggered = fileExists("${env.WORKSPACE}/checkpoint_triggered.txt") &&
+                        readFile("${env.WORKSPACE}/checkpoint_triggered.txt").trim() == 'true'
+                    env.CHECKPOINT_TRIGGERED = checkpointTriggered ? 'true' : 'false'
+
+                    if (checkpointTriggered) {
+                        def checkpointId = ""
+                        if (fileExists("${env.WORKSPACE}/checkpoint_id.txt")) {
+                            checkpointId = readFile("${env.WORKSPACE}/checkpoint_id.txt").trim()
+                        }
+                        if (!checkpointId?.trim()) {
+                            checkpointId = params.CHECKPOINT_ID?.trim()
+                        }
+                        if (!checkpointId?.trim()) {
+                            error("45-minute checkpoint was reached but no checkpoint ID could be extracted from pytest-output.log. Check for JENKINS_CHECKPOINT_ID= marker in the log.")
+                        }
+                        env.NEXT_CHECKPOINT_ID = checkpointId.trim()
+                        currentBuild.description = "Checkpoint pause: ${env.NEXT_CHECKPOINT_ID} | resume ${params.RESUME_COUNT ?: '0'}/${env.MAX_RESUME_COUNT}"
+                        echo "Checkpoint pause detected. Next run will resume with CHECKPOINT_ID=${checkpointId.trim()}"
                     }
                 }
             }
@@ -353,13 +265,8 @@ PY
                 expression { env.CHECKPOINT_TRIGGERED != 'true' }
             }
             steps {
-                container('python') {
-                    echo 'Running SQL tests...'
-                    sh '''
-                        . ${WORKSPACE}/.aws-env-vars.sh
-                        python3 run_sql_test.py
-                    '''
-                }
+                echo 'Running SQL tests...'
+                bat 'python run_sql_test.py'
             }
         }
     }
@@ -373,31 +280,28 @@ PY
                     // Persist raw Allure results so resumed builds can aggregate from prior runs
                     archiveArtifacts artifacts: 'allure-results/**', allowEmptyArchive: true
 
-                    // Publish Allure Report - run inside java container
-                    container('java') {
-                        sh 'java -version'
-                        allure([
-                            includeProperties: false,
-                            jdk: '',
-                            properties: [],
-                            reportBuildPolicy: 'ALWAYS',
-                            results: [[path: 'allure-results']]
-                        ])
-                    }
+                    // Publish Allure Report
+                    allure([
+                        includeProperties: false,
+                        jdk: '',
+                        properties: [],
+                        reportBuildPolicy: 'ALWAYS',
+                        results: [[path: 'allure-results']]
+                    ])
 
                     // Post TestRail result with Allure HTML link and zip attachment
-                    container('python') {
-                        script {
-                            env.TESTRAIL_STATUS = (currentBuild.currentResult == 'SUCCESS') ? '1' : '5'
-                            env.TESTRAIL_RESULT_TEXT = currentBuild.currentResult
-                        }
-                        sh '''
-                            echo "Posting TestRail result with Allure link and attachment..."
+                    script {
+                        env.TESTRAIL_STATUS = (currentBuild.currentResult == 'SUCCESS') ? '1' : '5'
+                        env.TESTRAIL_RESULT_TEXT = currentBuild.currentResult
+                    }
+                    powershell '''
+                        $ErrorActionPreference = "Stop"
+                        Write-Host "Posting TestRail result with Allure link and attachment..."
 
-                            # Ensure dependencies are available even if Build stage was skipped
-                            python3 -m pip install --quiet -r ${WORKSPACE}/requirements.txt || true
+                        python -m pip install --quiet -r "$env:WORKSPACE\\requirements.txt"
 
-                            python3 - <<'PY'
+                        $scriptPath = Join-Path $env:WORKSPACE "post_testrail_result.py"
+                        @"
 import os
 import sys
 
@@ -406,12 +310,14 @@ from DM_bankfile_validate_pipeline import report_to_testrail, TESTRAIL_TEST_ID
 
 status = int(os.environ.get('TESTRAIL_STATUS', '1'))
 result_text = os.environ.get('TESTRAIL_RESULT_TEXT', 'SUCCESS')
-comment = f"Jenkins pipeline result: {result_text}"
+comment = f'Jenkins pipeline result: {result_text}'
 
 report_to_testrail(TESTRAIL_TEST_ID, status, comment)
-PY
-                        '''
-                    }
+"@ | Set-Content -Path $scriptPath -Encoding UTF8
+
+                        python $scriptPath
+                        Remove-Item -Force $scriptPath -ErrorAction SilentlyContinue
+                    '''
                 } catch (Exception e) {
                     echo "Skipping workspace-dependent post actions (agent/workspace unavailable): ${e.getMessage()}"
                 }
