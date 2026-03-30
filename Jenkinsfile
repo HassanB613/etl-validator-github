@@ -1,6 +1,6 @@
 pipeline {
     agent {
-        label 'smoke-test-ec2-agent'
+        label 'ec2-agent-etl'
     }
     
     // Allure tool configured in Jenkins Global Tool Configuration
