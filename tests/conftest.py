@@ -20,24 +20,13 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GATE_GUARD_DIR = os.path.join(BASE_DIR, "test_output")
 GATE_GUARD_STATE_FILE = os.path.join(GATE_GUARD_DIR, "pre_upload_gate_state.json")
 GATE_GUARD_STOP_FILE = os.path.join(GATE_GUARD_DIR, "STOP_TESTING_READY_STUCK.flag")
-# Keep Jenkins smoke scope bounded, but high enough to include invalid-scenario
-# orchestration that exercises Step 8 DB <-> error CSV matching.
-DEFAULT_JENKINS_TEST_LIMIT = 7
+# No test capping; run all collected tests.
+DEFAULT_JENKINS_TEST_LIMIT = 0
 CHECKPOINTS_ENABLED = False
 
 
 def _get_pytest_run_limit():
-    """Return the max number of collected tests to run, or 0 for no limit."""
-    raw_limit = os.environ.get("PYTEST_RUN_LIMIT")
-    if raw_limit:
-        try:
-            return max(int(raw_limit), 0)
-        except ValueError:
-            print(f"WARNING: Ignoring invalid PYTEST_RUN_LIMIT value: {raw_limit}")
-
-    if os.environ.get("BUILD_URL"):
-        return DEFAULT_JENKINS_TEST_LIMIT
-
+    """Always run the full collected suite without skip-based limiting."""
     return 0
 
 
@@ -175,7 +164,20 @@ def pytest_configure(config):
 
 
 def pytest_collection_modifyitems(config, items):
-    """Optionally cap the session to the first N collected tests."""
+    """Enforce no-skip collection policy and run the full collected suite."""
+    cleared_markers = 0
+    for item in items:
+        if not item.own_markers:
+            continue
+        original_count = len(item.own_markers)
+        item.own_markers = [
+            marker for marker in item.own_markers if marker.name not in {"skip", "skipif"}
+        ]
+        cleared_markers += original_count - len(item.own_markers)
+
+    if cleared_markers:
+        print(f"\nINFO: Removed {cleared_markers} skip/skipif marker(s); running all collected tests.")
+
     run_limit = _get_pytest_run_limit()
     if run_limit <= 0 or len(items) <= run_limit:
         return
