@@ -1143,12 +1143,13 @@ def validate_error_file_with_database(glue_run_id, local_evidence_dir, run_start
     
     Returns (passed, details_dict) where passed is True if counts match.
     """
-    print("\n>>> Step 7: Database Error File Validation")
+    print("\n>>> Database validation: count and ERROR_DESC matching")
     details = {
         "glue_run_id": glue_run_id,
         "ins_batch_id": None,
         "db_error_count": None,
         "csv_error_count": None,
+        "count_match": None,
         "csv_file": None,
         "error_desc_match": False,
         "error_desc_mismatches": [],
@@ -1223,15 +1224,19 @@ def validate_error_file_with_database(glue_run_id, local_evidence_dir, run_start
             if db_error_count == 0:
                 print("✅ Row counts MATCH: DB=0, CSV=0 (no error CSV generated)")
                 details["csv_error_count"] = 0
+                details["count_match"] = True
                 details["error_desc_match"] = True
                 details["match"] = True
                 return True, details
+            details["count_match"] = False
             if attempt < max_attempts:
                 print(f"⏳ Error CSV not available yet. Retrying in {wait_seconds}s...")
                 time.sleep(wait_seconds)
                 continue
             print("❌ Could not download error CSV. Validation failed.")
             return False, details
+
+        details["count_match"] = db_error_count == csv_error_count
 
         # Step 4: Compare error descriptions per payee between CSV and DB
         csv_payee_errors = parse_error_csv_by_payee(csv_path)
@@ -1311,6 +1316,7 @@ def build_error_file_validation_allure_text(db_details):
     lines = [
         f"DB Error Count: {db_error_count}",
         f"CSV Error Count: {csv_error_count}",
+        f"Count Match: {db_details.get('count_match')}",
         f"Error File: {csv_name}",
         f"Error Desc Match: {db_details.get('error_desc_match', False)}",
         f"Error Desc Mismatches: {len(mismatches)}",
@@ -1336,6 +1342,43 @@ def build_error_file_validation_allure_text(db_details):
             )
 
     return "\n".join(lines)
+
+
+def apply_db_validation_step_status(step_status, db_details, count_step="Step 7", desc_step="Step 8"):
+    """Populate explicit count-vs-description validation statuses."""
+    unexpected_parquet = db_details.get("unexpected_parquet_files") or []
+    if unexpected_parquet:
+        step_status[count_step] = (
+            "Failed: Unexpected parquet in error folder: "
+            f"{unexpected_parquet}"
+        )
+        step_status[desc_step] = "Skipped (count validation failed due to unexpected parquet)"
+        return
+
+    db_count = db_details.get("db_error_count", "N/A")
+    csv_count = db_details.get("csv_error_count", "N/A")
+    csv_name = os.path.basename(db_details.get("csv_file")) if db_details.get("csv_file") else "N/A"
+
+    count_match = db_details.get("count_match")
+    if count_match is True:
+        step_status[count_step] = f"Passed (DB={db_count}, CSV={csv_count}, ErrorFile={csv_name})"
+    elif count_match is False:
+        step_status[count_step] = f"Failed: DB={db_count}, CSV={csv_count}, ErrorFile={csv_name}"
+    else:
+        step_status[count_step] = f"Failed: Count validation unavailable (DB={db_count}, CSV={csv_count}, ErrorFile={csv_name})"
+
+    desc_match = db_details.get("error_desc_match")
+    mismatches = db_details.get("error_desc_mismatches") or []
+    missing_in_db = db_details.get("payees_missing_in_db") or []
+    if desc_match is True:
+        step_status[desc_step] = "Passed (ERROR_DESC matched between CSV and PAYEE_ERROR_STG)"
+    elif desc_match is False:
+        step_status[desc_step] = (
+            "Failed: ERROR_DESC mismatch "
+            f"(mismatches={len(mismatches)}, missing_in_db={len(missing_in_db)})"
+        )
+    else:
+        step_status[desc_step] = "Failed: ERROR_DESC validation unavailable"
 
 # --------------------
 # Step 1: Generate test files
@@ -2060,7 +2103,7 @@ def run_test_scenario(file_type, seed=None, rows=50):
         # Step 8: Database validation (only for invalid/error scenarios)
         if not is_valid and glue_run_id:
             if step_status.get("Step 7", "").startswith("Failed: Unexpected parquet in error folder"):
-                step_status["Step 8"] = "Skipped (parquet found in error folder)"
+                step_status["Step 8"] = "Skipped (count validation failed due to unexpected parquet)"
             else:
                 test_output_dir = os.path.dirname(file_path) if file_path else "./test_output"
                 evidence_dir = os.path.join(test_output_dir, "test evidence s3 ready folder")
@@ -2079,26 +2122,14 @@ def run_test_scenario(file_type, seed=None, rows=50):
                         name="Step 8 - Error File Validation",
                         attachment_type=allure.attachment_type.TEXT,
                     )
-                if db_validation_passed:
-                    step_status["Step 8"] = (
-                        f"Passed (DB={db_details['db_error_count']}, CSV={db_details['csv_error_count']}, "
-                        f"ErrorFile={csv_name})"
-                    )
-                else:
-                    if db_details.get("unexpected_parquet_files"):
-                        unexpected_parquet_findings.extend(db_details.get("unexpected_parquet_files", []))
-                        step_status["Step 8"] = (
-                            "Failed: Unexpected parquet in error folder: "
-                            f"{db_details.get('unexpected_parquet_files')}"
-                        )
-                    else:
-                        step_status["Step 8"] = (
-                            f"Failed: DB={db_details.get('db_error_count', 'N/A')}, "
-                            f"CSV={db_details.get('csv_error_count', 'N/A')}, "
-                            f"ErrorFile={csv_name}"
-                        )
+                apply_db_validation_step_status(step_status, db_details, count_step="Step 7", desc_step="Step 8")
+                if db_details.get("unexpected_parquet_files"):
+                    unexpected_parquet_findings.extend(db_details.get("unexpected_parquet_files", []))
         elif is_valid:
             step_status["Step 8"] = "Skipped (valid scenario - no errors expected)"
+        else:
+            step_status["Step 7"] = "Skipped (no Glue run ID available)"
+            step_status["Step 8"] = "Skipped (no Glue run ID available)"
 
         print("\nStep Statuses:")
         for step, status in step_status.items():
@@ -2741,7 +2772,8 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
         "Step 4": "Pending",
         "Step 5": "Pending",
         "Step 6": "Pending",
-        "Step 7": "Pending"  # Database validation for error file testing
+        "Step 7": "Pending",  # Count validation
+        "Step 8": "Pending"   # ERROR_DESC matching validation
     }
     file_type = scenario_name
     glue_run_id = None  # Track Glue run ID for database validation
@@ -2836,6 +2868,7 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
         if parquet_after_run:
             unexpected_parquet_findings.extend(parquet_after_run)
             step_status["Step 7"] = f"Failed: Unexpected parquet in error folder: {sorted(set(parquet_after_run))}"
+            step_status["Step 8"] = "Skipped (count validation failed due to unexpected parquet)"
         # Step 7: Database validation for error file testing
         elif glue_run_id:
             test_output_dir = os.path.dirname(file_path) if file_path else "./test_output"
@@ -2852,29 +2885,15 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
             if ALLURE_AVAILABLE:
                 allure.attach(
                     build_error_file_validation_allure_text(db_details),
-                    name="Step 7 - Error File Validation",
+                    name="Step 7/8 - Error File Validation",
                     attachment_type=allure.attachment_type.TEXT,
                 )
-            if db_validation_passed:
-                step_status["Step 7"] = (
-                    f"Passed (DB={db_details['db_error_count']}, CSV={db_details['csv_error_count']}, "
-                    f"ErrorFile={csv_name})"
-                )
-            else:
-                if db_details.get("unexpected_parquet_files"):
-                    unexpected_parquet_findings.extend(db_details.get("unexpected_parquet_files", []))
-                    step_status["Step 7"] = (
-                        "Failed: Unexpected parquet in error folder: "
-                        f"{db_details.get('unexpected_parquet_files')}"
-                    )
-                else:
-                    step_status["Step 7"] = (
-                        f"Failed: DB={db_details.get('db_error_count', 'N/A')}, "
-                        f"CSV={db_details.get('csv_error_count', 'N/A')}, "
-                        f"ErrorFile={csv_name}"
-                    )
+            apply_db_validation_step_status(step_status, db_details, count_step="Step 7", desc_step="Step 8")
+            if db_details.get("unexpected_parquet_files"):
+                unexpected_parquet_findings.extend(db_details.get("unexpected_parquet_files", []))
         else:
             step_status["Step 7"] = "Skipped (no Glue run ID available)"
+            step_status["Step 8"] = "Skipped (no Glue run ID available)"
 
     except Exception as e:
         _mark_pending_steps_failed(step_status, str(e))
