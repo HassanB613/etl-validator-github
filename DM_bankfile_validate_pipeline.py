@@ -1976,7 +1976,11 @@ def run_test_scenario(file_type, seed=None, rows=50):
         file_found = check_s3_file_exists_with_naming_convention(S3_PREFIX, timestamp)
         assert file_found, f"❌ {file_type.capitalize()} file not found in S3: {file_path}"
         print(f"✅ {file_type.capitalize()} file is present in S3.")
-        step_status["Step 3"] = "Passed"
+        step_status["Step 3"] = (
+            f"Passed (Naming check: verified expected file "
+            f"mtfdm_{ENV_SUFFIX}_dmbankdata_{timestamp}.parquet exists in {S3_PREFIX} "
+            "before triggering Glue)"
+        )
 
         print(">>> Step 4: Trigger and monitor Glue job")
         glue_job_success, glue_run_id, glue_reason = wait_for_glue_success(
@@ -2044,7 +2048,11 @@ def run_test_scenario(file_type, seed=None, rows=50):
             assert file_absent, f"❌ {file_type.capitalize()} file still found in S3 ready folder: {timestamp}"
             print(f"✅ {file_type.capitalize()} file is no longer in the S3 ready folder.")
             ready_folder_empty_epoch = time.time()
-            step_status["Step 5"] = "Passed"
+            step_status["Step 5"] = (
+                f"Passed (Naming check: confirmed expected file "
+                f"mtfdm_{ENV_SUFFIX}_dmbankdata_{timestamp}.parquet is no longer in {S3_PREFIX} "
+                "after Glue processing)"
+            )
         except AssertionError as e:
             step_status["Step 5"] = f"Failed: {str(e)}"
             print(str(e))
@@ -2063,7 +2071,11 @@ def run_test_scenario(file_type, seed=None, rows=50):
                 time.sleep(15)
             assert file_in_archive, f"❌ {file_type.capitalize()} file not found in S3 archive folder: {timestamp}"
             print(f"✅ {file_type.capitalize()} file successfully moved to the archive folder.")
-            step_status["Step 6"] = "Passed"
+            step_status["Step 6"] = (
+                f"Passed (Naming check: verified expected file "
+                f"mtfdm_{ENV_SUFFIX}_dmbankdata_{timestamp}.parquet exists in {archive_prefix} "
+                "to confirm archive movement)"
+            )
         except AssertionError as e:
             step_status["Step 6"] = f"Failed: {str(e)}"
             print(str(e))
@@ -2786,7 +2798,11 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
         file_found = check_s3_file_exists_with_naming_convention(S3_PREFIX, timestamp)
         assert file_found, f"❌ File not found in S3: {file_path}"
         print(f"✅ File is present in S3.")
-        step_status["Step 3"] = "Passed"
+        step_status["Step 3"] = (
+            f"Passed (Naming check: verified expected file "
+            f"mtfdm_{ENV_SUFFIX}_dmbankdata_{timestamp}.parquet exists in {S3_PREFIX} "
+            "before triggering Glue)"
+        )
 
         print(">>> Step 4: Trigger and monitor Glue job")
         glue_job_success, glue_run_id, glue_reason = wait_for_glue_success(
@@ -2843,7 +2859,11 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
             file_absent = not check_s3_file_exists_with_naming_convention(S3_PREFIX, timestamp)
             assert file_absent, f"❌ File still found in S3 ready folder: {timestamp}"
             print(f"✅ File is no longer in the S3 ready folder.")
-            step_status["Step 5"] = "Passed"
+            step_status["Step 5"] = (
+                f"Passed (Naming check: confirmed expected file "
+                f"mtfdm_{ENV_SUFFIX}_dmbankdata_{timestamp}.parquet is no longer in {S3_PREFIX} "
+                "after Glue processing)"
+            )
             ready_folder_empty_epoch = time.time()
         except AssertionError as e:
             step_status["Step 5"] = f"Failed: {str(e)}"
@@ -2857,7 +2877,11 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
             file_in_archive = check_s3_file_exists_with_naming_convention(archive_prefix, timestamp)
             assert file_in_archive, f"❌ File not found in S3 archive folder: {timestamp}"
             print(f"✅ File successfully moved to the archive folder.")
-            step_status["Step 6"] = "Passed"
+            step_status["Step 6"] = (
+                f"Passed (Naming check: verified expected file "
+                f"mtfdm_{ENV_SUFFIX}_dmbankdata_{timestamp}.parquet exists in {archive_prefix} "
+                "to confirm archive movement)"
+            )
         except AssertionError as e:
             step_status["Step 6"] = f"Failed: {str(e)}"
             print(str(e))
