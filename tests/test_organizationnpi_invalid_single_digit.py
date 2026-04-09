@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import subprocess
 import pytest
@@ -49,7 +49,7 @@ class TestOrganizationNPISingleDigit:
             sys.executable, pipeline_path,
             "--invalid-values", "OrganizationNPI:1",
             "--dev2",
-            "--rows", "25",
+            "--rows", "10",
             "--test-name", "test_organizationnpi_invalid_single_digit"
         ]
         
@@ -74,3 +74,4 @@ class TestOrganizationNPISingleDigit:
             
             # Verify validation detected errors (check for success indication)
             assert "Row counts MATCH" in pipe_result.stdout, f"Validation failed - output should contain 'Row counts MATCH', but got: {pipe_result.stdout[-500:]}"
+

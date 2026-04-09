@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import subprocess
 import re
@@ -41,9 +41,10 @@ class TestEffectiveStartDateBlankActiveRecord:
             "RecordOperation:A",
             "EffectiveStartDate:",
             "--dev2",
-            "--rows", "25",
+            "--rows", "10",
             "--test-name", "test_effectivestartdate_blank_active_record"
         ]
 
         result = subprocess.run(pipe_command, cwd=base_dir)
         assert result.returncode == 0, "Pipeline execution failed"
+

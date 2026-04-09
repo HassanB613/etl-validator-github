@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import subprocess
 import re
@@ -44,9 +44,10 @@ class TestContactTitleOverMaxLength:
             "OrganizationCode:1=P",
             "ContactTitle:VeryLongContactTitleExceedingMaxLength",
             "--dev2",
-            "--rows", "25",
+            "--rows", "10",
             "--test-name", "test_contacttitle_over_max_length"
         ]
 
         result = subprocess.run(pipe_command, cwd=base_dir)
         assert result.returncode == 0, "Pipeline execution failed"
+

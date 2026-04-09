@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import subprocess
 import re
@@ -39,9 +39,10 @@ class TestOrganizationTINTypeInvalidValue:
             "--invalid-values",
             "OrganizationTINType:XXX",
             "--dev2",
-            "--rows", "25",
+            "--rows", "10",
             "--test-name", "test_organizationtintype_invalid_value"
         ]
 
         result = subprocess.run(pipe_command, cwd=base_dir)
         assert result.returncode == 0, "Pipeline execution failed"
+

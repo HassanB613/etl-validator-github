@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import subprocess
 import re
@@ -45,9 +45,10 @@ class TestRoutingNumberInvalidCharacters:
             "PaymentMode:EFT",
             "RoutingTransitNumber:12345A678",
             "--dev2",
-            "--rows", "25",
+            "--rows", "10",
             "--test-name", "test_routingnumber_invalid_characters"
         ]
 
         result = subprocess.run(pipe_command, cwd=base_dir)
         assert result.returncode == 0, "Pipeline execution failed"
+

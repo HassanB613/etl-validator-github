@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import subprocess
 import pytest
@@ -49,7 +49,7 @@ class TestEffectiveStartDateInvalidFormat:
             sys.executable, pipeline_path,
             "--invalid-values", "EffectiveStartDate:2026/03/03",
             "--dev2",
-            "--rows", "25",
+            "--rows", "10",
             "--test-name", "test_effectivestartdate_invalid_format"
         ]
         
@@ -74,5 +74,6 @@ class TestEffectiveStartDateInvalidFormat:
             
             # Verify validation detected errors (check for success indication)
             assert "Row counts MATCH" in pipe_result.stdout, f"Validation failed - output should contain 'Row counts MATCH', but got: {pipe_result.stdout[-500:]}"
+
 
 

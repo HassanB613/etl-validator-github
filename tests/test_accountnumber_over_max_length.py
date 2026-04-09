@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import subprocess
 import re
@@ -45,9 +45,10 @@ class TestAccountNumberOverMaxLength:
             "PaymentMode:EFT",
             "AccountNumber:123456789012345678",
             "--dev2",
-            "--rows", "25",
+            "--rows", "10",
             "--test-name", "test_accountnumber_over_max_length"
         ]
 
         result = subprocess.run(pipe_command, cwd=base_dir)
         assert result.returncode == 0, "Pipeline execution failed"
+

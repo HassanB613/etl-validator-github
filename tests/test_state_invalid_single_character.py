@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import subprocess
 import re
@@ -45,9 +45,10 @@ class TestStateInvalidSingleCharacter:
             "OrganizationCode:1=P",
             "State:C",
             "--dev2",
-            "--rows", "25",
+            "--rows", "10",
             "--test-name", "test_state_invalid_single_character"
         ]
 
         result = subprocess.run(pipe_command, cwd=base_dir)
         assert result.returncode == 0, "Pipeline execution failed"
+

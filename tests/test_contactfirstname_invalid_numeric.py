@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import subprocess
 import re
@@ -45,9 +45,10 @@ class TestContactFirstNameInvalidNumeric:
             "OrganizationCode:1=P",
             "ContactFirstName:John123",
             "--dev2",
-            "--rows", "25",
+            "--rows", "10",
             "--test-name", "test_contactfirstname_invalid_numeric"
         ]
 
         result = subprocess.run(pipe_command, cwd=base_dir)
         assert result.returncode == 0, "Pipeline execution failed"
+

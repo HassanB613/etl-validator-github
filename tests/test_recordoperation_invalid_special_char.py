@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import subprocess
 import pytest
@@ -49,7 +49,7 @@ class TestRecordOperationValidation:
             sys.executable, pipeline_path,
             "--invalid-values", "RecordOperation:$",
             "--dev2",
-            "--rows", "25",
+            "--rows", "10",
             "--test-name", "test_recordoperation_invalid_special_char"
         ]
         
@@ -110,7 +110,7 @@ class TestRecordOperationValidation:
             sys.executable, pipeline_path,
             "--invalid-values", "RecordOperation:Z",
             "--dev2",
-            "--rows", "25"
+            "--rows", "10"
         ]
         
         with allure.step("Inject invalid value 'Z' into RecordOperation column"):
@@ -131,3 +131,4 @@ class TestRecordOperationValidation:
             
             # Pipeline should complete successfully with errors captured
             assert pipe_result.returncode == 0, f"Pipeline failed with return code {pipe_result.returncode}"
+

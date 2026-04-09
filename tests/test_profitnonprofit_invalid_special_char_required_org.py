@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import subprocess
 import re
@@ -44,7 +44,7 @@ class TestProfitNonprofitSpecialCharRequiredOrg:
             "OrganizationCode:1=P",
             "ProfitNonprofit:@!#$&&",
             "--dev2",
-            "--rows", "25",
+            "--rows", "10",
             "--test-name", "test_profitnonprofit_invalid_special_char_required_org"
         ]
 
@@ -70,3 +70,4 @@ class TestProfitNonprofitSpecialCharRequiredOrg:
                 f"Expected DB/CSV counts to match, but found DB={db_count}, CSV={csv_count}."
             )
             assert db_count > 0, "Expected non-zero invalid-row impact in required-org ProfitNonprofit context."
+

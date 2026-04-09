@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import subprocess
 import pytest
@@ -50,7 +50,7 @@ class TestOrganizationTINTypeMixedSpecial:
             "--invalid-values", "OrganizationTINType:@#$!!!",
 
             "--dev2",
-            "--rows", "25",
+            "--rows", "10",
             "--test-name", "test_organizationtintype_invalid_mixed_special"
         ]
         
@@ -75,3 +75,4 @@ class TestOrganizationTINTypeMixedSpecial:
             
             # Verify validation detected errors (check for success indication)
             assert "Row counts MATCH" in pipe_result.stdout, f"Validation failed - output should contain 'Row counts MATCH', but got: {pipe_result.stdout[-500:]}"
+

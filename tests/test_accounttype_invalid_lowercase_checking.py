@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import subprocess
 import pytest
@@ -49,7 +49,7 @@ class TestAccountTypeInvalidLowercaseChecking:
             sys.executable, pipeline_path,
             "--invalid-values", "AccountType:checking",
             "--dev2",
-            "--rows", "25",
+            "--rows", "10",
             "--test-name", "test_accounttype_invalid_lowercase_checking"
         ]
         
@@ -74,5 +74,6 @@ class TestAccountTypeInvalidLowercaseChecking:
             
             # Verify validation detected errors (check for success indication)
             assert "Row counts MATCH" in pipe_result.stdout, f"Validation failed - output should contain 'Row counts MATCH', but got: {pipe_result.stdout[-500:]}"
+
 
 

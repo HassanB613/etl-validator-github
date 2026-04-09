@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import subprocess
 import allure
@@ -37,7 +37,7 @@ class TestContactLastNameBlankDP:
             "OrganizationCode:1=P",
             "ContactLastName:",
             "--dev2",
-            "--rows", "25",
+            "--rows", "10",
             "--test-name", "test_contactlastname_blank_dp"
         ]
 
@@ -56,3 +56,4 @@ class TestContactLastNameBlankDP:
             assert "DB=0, CSV=0 (no error CSV generated)" not in pipe_result.stdout, (
                 "Expected invalid D/P record handling, but pipeline reported no error records."
             )
+

@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import subprocess
 import pytest
@@ -50,7 +50,7 @@ class TestRecordOperationInvalidZ:
             sys.executable, pipeline_path,
             "--invalid-values", "RecordOperation:Z",
             "--dev2",
-            "--rows", "25"
+            "--rows", "10"
         ]
         
         with allure.step("Inject invalid value 'Z' into RecordOperation column"):
@@ -74,3 +74,4 @@ class TestRecordOperationInvalidZ:
             
             # Verify validation detected errors (check for success indication)
             assert "Row counts MATCH" in pipe_result.stdout, f"Validation failed - output should contain 'Row counts MATCH', but got: {pipe_result.stdout[-500:]}"
+

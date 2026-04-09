@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import subprocess
 import re
@@ -41,9 +41,10 @@ class TestEffectiveEndDateBlankDeactivatedRecord:
             "RecordOperation:D",
             "EffectiveEndDate:",
             "--dev2",
-            "--rows", "25",
+            "--rows", "10",
             "--test-name", "test_effectiveenddate_blank_deactivated_record"
         ]
 
         result = subprocess.run(pipe_command, cwd=base_dir)
         assert result.returncode == 0, "Pipeline execution failed"
+

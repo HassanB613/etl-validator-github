@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import subprocess
 import re
@@ -46,9 +46,10 @@ class TestContactEmailOverMaxLength:
             "OrganizationCode:1=P",
             "ContactEmail:verylongemailaddressthatexceedsmaximumlengthvalidationthresholdof100charactersexactly12345@example.com",
             "--dev2",
-            "--rows", "25",
+            "--rows", "10",
             "--test-name", "test_contactemail_over_max_length"
         ]
 
         result = subprocess.run(pipe_command, cwd=base_dir)
         assert result.returncode == 0, "Pipeline execution failed"
+

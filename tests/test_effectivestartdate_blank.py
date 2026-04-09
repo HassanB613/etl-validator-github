@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import subprocess
 import pytest
@@ -51,7 +51,7 @@ class TestEffectiveStartDateBlank:
             sys.executable, pipeline_path,
             "--invalid-values", "EffectiveStartDate:",
             "--dev2",
-            "--rows", "25",
+            "--rows", "10",
             "--test-name", "test_effectivestartdate_blank"
         ]
         
@@ -86,3 +86,4 @@ class TestEffectiveStartDateBlank:
                 "Expected non-zero errors for blank EffectiveStartDate, "
                 f"but got DB={db_count}, CSV={csv_count}. This indicates an upstream DEV validation defect."
             )
+

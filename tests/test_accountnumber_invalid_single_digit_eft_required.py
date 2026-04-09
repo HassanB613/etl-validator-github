@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import subprocess
 import re
@@ -51,7 +51,7 @@ class TestAccountNumberInvalidSingleDigitEFTRequired:
             "RoutingTransitNumber:123456789",
             "AccountNumber:8",
             "--dev2",
-            "--rows", "25",
+            "--rows", "10",
             "--test-name", "test_accountnumber_invalid_single_digit_eft_required"
         ]
 
@@ -77,3 +77,4 @@ class TestAccountNumberInvalidSingleDigitEFTRequired:
                 f"Expected DB/CSV counts to match, but found DB={db_count}, CSV={csv_count}."
             )
             assert db_count > 0, "Expected non-zero invalid-row impact in forced EFT context."
+

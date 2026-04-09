@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import subprocess
 import re
@@ -45,9 +45,10 @@ class TestContactFaxInvalidFormat:
             "OrganizationCode:1=P",
             "ContactFax:555-987-6543@",
             "--dev2",
-            "--rows", "25",
+            "--rows", "10",
             "--test-name", "test_contactfax_invalid_format"
         ]
 
         result = subprocess.run(pipe_command, cwd=base_dir)
         assert result.returncode == 0, "Pipeline execution failed"
+

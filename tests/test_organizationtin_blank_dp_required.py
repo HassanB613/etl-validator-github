@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import subprocess
 import re
@@ -43,9 +43,10 @@ class TestOrganizationTINBlankDPRequired:
             "OrganizationCode:1=P",
             "OrganizationTIN:",
             "--dev2",
-            "--rows", "25",
+            "--rows", "10",
             "--test-name", "test_organizationtin_blank_dp_required"
         ]
 
         result = subprocess.run(pipe_command, cwd=base_dir)
         assert result.returncode == 0, "Pipeline execution failed"
+

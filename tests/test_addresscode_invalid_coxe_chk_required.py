@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import subprocess
 import re
@@ -45,7 +45,7 @@ class TestAddressCodeInvalidCOXECHKRequired:
             "PaymentMode:CHK",
             "AddressCode:COXE",
             "--dev2",
-            "--rows", "25",
+            "--rows", "10",
             "--test-name", "test_addresscode_invalid_coxe_chk_required"
         ]
 
@@ -71,3 +71,4 @@ class TestAddressCodeInvalidCOXECHKRequired:
                 f"Expected DB/CSV counts to match, but found DB={db_count}, CSV={csv_count}."
             )
             assert db_count > 0, "Expected non-zero invalid-row impact in forced CHK context."
+

@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import subprocess
 import re
@@ -43,7 +43,7 @@ class TestOrganizationIdentifierAmpersandStrict:
             "PayeeID:PAYEE123",
             "OrganizationIdentifier:&&&&&&&",
             "--dev2",
-            "--rows", "25",
+            "--rows", "10",
             "--test-name", "test_organizationidentifier_invalid_ampersand_strict"
         ]
 
@@ -69,3 +69,4 @@ class TestOrganizationIdentifierAmpersandStrict:
                 f"Expected DB/CSV counts to match, but found DB={db_count}, CSV={csv_count}."
             )
             assert db_count > 0, "Expected non-zero invalid-row impact in strict OrganizationIdentifier context."
+

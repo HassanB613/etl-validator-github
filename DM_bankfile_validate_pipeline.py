@@ -1469,7 +1469,7 @@ def get_ready_folder_files():
     return [obj["Key"] for obj in result.get("Contents", []) if not obj["Key"].endswith("/")]
 
 
-def get_glue_runs_since(job_name, min_started_epoch=None, max_results=25):
+def get_glue_runs_since(job_name, min_started_epoch=None, max_results=10):
     """Fetch Glue runs optionally filtered by StartedOn >= min_started_epoch."""
     try:
         response = glue.get_job_runs(JobName=job_name, MaxResults=max_results)
@@ -1619,7 +1619,7 @@ def wait_for_glue_success(job_name, timeout=None, upload_started_epoch=None):
     # Check multiple times for a run started after this upload (S3 trigger may have a delay)
     print("🔍 Checking for post-upload Glue job run...")
     for check_attempt in range(9):
-        candidate_runs = get_glue_runs_since(job_name, min_started_epoch=correlation_floor, max_results=25)
+        candidate_runs = get_glue_runs_since(job_name, min_started_epoch=correlation_floor, max_results=10)
         if candidate_runs:
             selected_run = candidate_runs[0]
             run_id = selected_run.get("Id")
@@ -1654,7 +1654,7 @@ def wait_for_glue_success(job_name, timeout=None, upload_started_epoch=None):
                     # Job started between our check and start - find it and monitor
                     print(f"⚠️ Concurrent run detected. Checking for the running job...")
                     time.sleep(5)
-                    candidate_runs = get_glue_runs_since(job_name, min_started_epoch=correlation_floor, max_results=25)
+                    candidate_runs = get_glue_runs_since(job_name, min_started_epoch=correlation_floor, max_results=10)
                     if candidate_runs:
                         run_id = candidate_runs[0].get("Id")
                         run_reason = "Concurrency detected; monitoring post-upload run found during retry"
