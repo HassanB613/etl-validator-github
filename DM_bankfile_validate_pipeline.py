@@ -2247,6 +2247,7 @@ def run_test_scenario(file_type, seed=None, rows=50):
         if file_path:  # Only proceed if file_path was set
             test_output_dir = os.path.dirname(file_path)
             evidence_dir = os.path.join(test_output_dir, "test evidence s3 ready folder")
+            os.makedirs(evidence_dir, exist_ok=True)
             print(f"\n>>> Collecting S3 evidence to: {evidence_dir}")
             
             # Download only the specific archive file (same name as uploaded)
@@ -2265,11 +2266,6 @@ def run_test_scenario(file_type, seed=None, rows=50):
             
             # Save S3 listings for reference
             save_s3_listing_to_file(ERROR_CSV_PREFIX, evidence_dir, "s3_error_listing_before_delete.txt")
-            
-            if not archive_downloaded and error_files == 0:
-                if os.path.exists(evidence_dir) and not os.listdir(evidence_dir):
-                    os.rmdir(evidence_dir)
-                    print(f"🗑️ Removed empty evidence directory: {evidence_dir}")
         
         # --- Build archive file info for return ---
         archive_filename = f"mtfdm_{ENV_SUFFIX}_dmbankdata_{timestamp}.parquet"
@@ -3016,6 +3012,7 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
         if file_path:  # Only proceed if file_path was set
             test_output_dir = os.path.dirname(file_path)
             evidence_dir = os.path.join(test_output_dir, "test evidence s3 ready folder")
+            os.makedirs(evidence_dir, exist_ok=True)
             print(f"\n>>> Collecting S3 evidence to: {evidence_dir}")
             
             # Download only the specific archive file (same name as uploaded)
@@ -3034,11 +3031,6 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
             
             # Save S3 listings for reference
             save_s3_listing_to_file(ERROR_CSV_PREFIX, evidence_dir, "s3_error_listing_before_delete.txt")
-            
-            if not archive_downloaded and error_files == 0:
-                if os.path.exists(evidence_dir) and not os.listdir(evidence_dir):
-                    os.rmdir(evidence_dir)
-                    print(f"🗑️ Removed empty evidence directory: {evidence_dir}")
         # --- Now report to TestRail ---
             detailed_comment = build_testrail_comment(file_type, step_status)
         if unexpected_parquet_findings:
