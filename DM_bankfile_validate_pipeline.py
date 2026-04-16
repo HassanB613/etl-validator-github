@@ -988,6 +988,42 @@ def get_csv_data_row_count(local_path):
         print(f"⚠️ Could not count CSV rows from file lines: {e}")
         return 0
 
+
+def list_s3_objects_paginated(bucket, prefix, max_pages=200):
+    """
+    Return all objects under a prefix using ListObjectsV2 pagination.
+    This avoids missing recent files when a prefix contains >1000 objects.
+    """
+    contents = []
+    continuation_token = None
+    page_count = 0
+
+    while True:
+        page_count += 1
+        request = {"Bucket": bucket, "Prefix": prefix}
+        if continuation_token:
+            request["ContinuationToken"] = continuation_token
+
+        result = s3.list_objects_v2(**request)
+        contents.extend(result.get("Contents", []))
+
+        is_truncated = result.get("IsTruncated", False)
+        if not is_truncated:
+            break
+
+        continuation_token = result.get("NextContinuationToken")
+        if not continuation_token:
+            break
+
+        if page_count >= max_pages:
+            print(
+                "⚠️ Reached pagination safety cap while listing S3 objects "
+                f"for prefix '{prefix}' (pages={max_pages})."
+            )
+            break
+
+    return contents
+
 def find_unexpected_error_parquet_files(prefix, min_modified_epoch=None):
     """
     Find unexpected parquet files in the error folder.
@@ -1001,8 +1037,7 @@ def find_unexpected_error_parquet_files(prefix, min_modified_epoch=None):
     """
     unexpected_keys = []
     try:
-        result = s3.list_objects_v2(Bucket=BUCKET, Prefix=prefix)
-        contents = result.get("Contents", [])
+        contents = list_s3_objects_paginated(BUCKET, prefix)
 
         for obj in contents:
             key = obj.get("Key", "")
@@ -1063,8 +1098,7 @@ def download_latest_error_csv_from_s3(local_evidence_dir):
     Returns (local_file_path, row_count) or (None, 0) if not found.
     """
     try:
-        result = s3.list_objects_v2(Bucket=BUCKET, Prefix=ERROR_CSV_PREFIX)
-        contents = result.get("Contents", [])
+        contents = list_s3_objects_paginated(BUCKET, ERROR_CSV_PREFIX)
         
         # Filter to only CSV files
         csv_files = [obj for obj in contents if obj["Key"].endswith(".csv")]
@@ -1120,8 +1154,7 @@ def download_latest_error_csv_in_window(local_evidence_dir, window_start_epoch=N
         return download_latest_error_csv_from_s3(local_evidence_dir)
 
     try:
-        result = s3.list_objects_v2(Bucket=BUCKET, Prefix=ERROR_CSV_PREFIX)
-        contents = result.get("Contents", [])
+        contents = list_s3_objects_paginated(BUCKET, ERROR_CSV_PREFIX)
 
         csv_files = [obj for obj in contents if obj["Key"].endswith(".csv")]
         if not csv_files:
