@@ -1097,8 +1097,9 @@ def download_latest_error_csv_in_window(local_evidence_dir, window_start_epoch=N
         Download the newest error CSV after a run start epoch.
 
         Match logic:
-            - LastModified must be >= window_start_epoch
-            - No upper time bound is enforced (window_seconds kept for backward compatibility)
+            - Prefer the newest CSV with LastModified >= buffered window start
+            - If none match the buffered window, fall back to the newest CSV overall
+            - No upper time bound is enforced
 
     Returns (local_file_path, row_count) or (None, 0) if not found.
     """
@@ -1114,22 +1115,36 @@ def download_latest_error_csv_in_window(local_evidence_dir, window_start_epoch=N
             print(f"❌ No CSV files found in s3://{BUCKET}/{ERROR_CSV_PREFIX}")
             return None, 0
 
+        buffer_seconds = max(int(window_seconds or 0), 30)
+        buffered_start_epoch = max(window_start_epoch - buffer_seconds, 0)
+        print(
+            "🔍 Looking for newest error CSV in buffered run window: "
+            f"LastModified >= {datetime.fromtimestamp(buffered_start_epoch)} "
+            f"(buffer={buffer_seconds}s)"
+        )
+
         matching_files = []
         for obj in csv_files:
             try:
                 modified_epoch = obj["LastModified"].timestamp()
             except Exception:
                 continue
-            if modified_epoch >= window_start_epoch:
+            if modified_epoch >= buffered_start_epoch:
                 matching_files.append(obj)
 
         if not matching_files:
-            print(f"❌ No error CSV found after epoch {datetime.fromtimestamp(window_start_epoch)}")
-            return None, 0
+            print(
+                "⚠️ No error CSV found in buffered run window. "
+                "Falling back to newest CSV in error folder."
+            )
+            return download_latest_error_csv_from_s3(local_evidence_dir)
 
         matching_files.sort(key=lambda x: x["LastModified"], reverse=True)
         target_file = matching_files[0]
-        print(f"📥 Downloading newest error file after run start: {target_file['Key']} (Modified: {target_file['LastModified']})")
+        print(
+            "📥 Downloading newest error file in buffered run window: "
+            f"{target_file['Key']} (Modified: {target_file['LastModified']})"
+        )
 
         os.makedirs(local_evidence_dir, exist_ok=True)
         local_path = os.path.join(local_evidence_dir, os.path.basename(target_file["Key"]))
@@ -1162,7 +1177,7 @@ def validate_error_file_with_database(glue_run_id, local_evidence_dir, run_start
         "csv_error_count": None,
         "count_match": None,
         "csv_file": None,
-        "error_desc_match": False,
+        "error_desc_match": None,
         "error_desc_mismatches": [],
         "payees_missing_in_db": [],
         "payees_missing_in_csv": [],
@@ -1244,7 +1259,7 @@ def validate_error_file_with_database(glue_run_id, local_evidence_dir, run_start
                 print(f"⏳ Error CSV not available yet. Retrying in {wait_seconds}s...")
                 time.sleep(wait_seconds)
                 continue
-            print("❌ Could not download error CSV. Validation failed.")
+            print("❌ Could not download error CSV. Count validation failed; ERROR_DESC validation unavailable.")
             return False, details
 
         details["count_match"] = db_error_count == csv_error_count
