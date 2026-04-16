@@ -819,6 +819,17 @@ def _normalize_error_desc(text):
     return re.sub(r"\s+", " ", str(text or "")).strip().strip(",")
 
 
+def _split_error_desc_tokens(desc_list):
+    """Split comma-delimited ERROR_DESC text into normalized per-rule tokens."""
+    tokens = set()
+    for desc in desc_list or []:
+        for piece in str(desc or "").split(","):
+            normalized = _normalize_error_desc(piece)
+            if normalized:
+                tokens.add(normalized)
+    return tokens
+
+
 def parse_error_csv_by_payee(local_path):
     """
     Parse error CSV and return PayeeId -> list[ERROR_DESC] mapping.
@@ -939,18 +950,18 @@ def compare_csv_and_db_error_desc(csv_payee_errors, db_payee_errors):
     for payee in sorted(csv_payees & db_payees):
         csv_descs = csv_payee_errors.get(payee, [])
         db_descs = db_payee_errors.get(payee, [])
-        normalized_db = {_normalize_error_desc(x) for x in db_descs}
+        csv_tokens = _split_error_desc_tokens(csv_descs)
+        db_tokens = _split_error_desc_tokens(db_descs)
 
-        for csv_desc in csv_descs:
-            normalized_csv = _normalize_error_desc(csv_desc)
-            if normalized_csv not in normalized_db:
-                mismatch_list.append(
-                    {
-                        "payee_id": payee,
-                        "csv_error_desc": csv_desc,
-                        "db_error_desc_options": db_descs,
-                    }
-                )
+        missing_tokens = sorted(csv_tokens - db_tokens)
+        if missing_tokens:
+            mismatch_list.append(
+                {
+                    "payee_id": payee,
+                    "csv_error_desc": ", ".join(missing_tokens),
+                    "db_error_desc_options": sorted(db_tokens),
+                }
+            )
 
     is_match = not mismatch_list and not missing_in_db
     return is_match, mismatch_list, missing_in_db, missing_in_csv
