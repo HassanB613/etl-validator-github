@@ -30,6 +30,9 @@ FOCUSED_TEST_NODEIDS = (
     "tests/test_accountnumber_blank_eft_required.py::"
     "TestAccountNumberBlankEFTRequired::"
     "test_accountnumber_blank_eft_required",
+    "tests/test_chk_contact_fields_over_max_length_combined.py::"
+    "TestChkContactFieldsOverMaxLengthCombined::"
+    "test_chk_contact_fields_over_max_length_combined",
 )
 
 
