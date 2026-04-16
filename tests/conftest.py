@@ -23,10 +23,13 @@ GATE_GUARD_STOP_FILE = os.path.join(GATE_GUARD_DIR, "STOP_TESTING_READY_STUCK.fl
 # No test capping; run all collected tests.
 DEFAULT_JENKINS_TEST_LIMIT = 0
 CHECKPOINTS_ENABLED = False
-FOCUSED_TEST_NODEID = (
+FOCUSED_TEST_NODEIDS = (
     "tests/test_chk_core_fields_special_characters_combined.py::"
     "TestChkCoreFieldsSpecialCharactersCombined::"
-    "test_chk_core_fields_special_characters_combined"
+    "test_chk_core_fields_special_characters_combined",
+    "tests/test_accountnumber_blank_eft_required.py::"
+    "TestAccountNumberBlankEFTRequired::"
+    "test_accountnumber_blank_eft_required",
 )
 
 
@@ -172,24 +175,26 @@ def pytest_collection_modifyitems(config, items):
     """Enforce no-skip collection policy and run the full collected suite."""
     focus_enabled = True
     if focus_enabled:
-        focus_skip = pytest.mark.skip(reason=f"Focused run: only executing {FOCUSED_TEST_NODEID}")
-        focused_found = False
+        allowed_nodeids = set(FOCUSED_TEST_NODEIDS)
+        focus_skip = pytest.mark.skip(reason="Focused run: only executing selected focused tests")
+        focused_found = []
         skipped_count = 0
         for item in items:
-            if item.nodeid == FOCUSED_TEST_NODEID:
-                focused_found = True
+            if item.nodeid in allowed_nodeids:
+                focused_found.append(item.nodeid)
                 continue
             item.add_marker(focus_skip)
             skipped_count += 1
 
         if focused_found:
             print(
-                f"\nINFO: Focus mode enabled. Running only {FOCUSED_TEST_NODEID}. "
+                "\nINFO: Focus mode enabled. "
+                f"Running {len(focused_found)} focused test(s). "
                 f"Marked {skipped_count} test(s) as skipped."
             )
         else:
             print(
-                f"\nWARNING: Focused test not found: {FOCUSED_TEST_NODEID}. "
+                f"\nWARNING: Focused tests not found: {FOCUSED_TEST_NODEIDS}. "
                 "No focus skip markers applied."
             )
         return
