@@ -3172,6 +3172,13 @@ def run_invalid_values_scenario(invalid_values, rows=50, formats=["csv"], seed=N
     try:
         import pandas as pd
         df = pd.read_parquet(parquet_path)
+        trace_column = "invalid_injection_trace"
+        row_traces = [[] for _ in range(len(df))]
+
+        def _append_trace(row_idx, text):
+            if 0 <= row_idx < len(row_traces):
+                row_traces[row_idx].append(text)
+
         for item in invalid_values:
             if ":" in item:
                 col, val = item.split(":", 1)
@@ -3180,21 +3187,35 @@ def run_invalid_values_scenario(invalid_values, rows=50, formats=["csv"], seed=N
                 if col in df.columns:
                     # Check if specific rows are targeted (e.g., "ColumnName:row_index=value")
                     if "=" in val:
-                        row_index, value = val.split("=", 1)
-                        row_index = int(row_index.strip())
-                        value = value.strip()
-                        if 0 <= row_index < len(df):
-                            df.at[row_index, col] = value
+                        try:
+                            row_index, value = val.split("=", 1)
+                            row_index = int(row_index.strip())
+                            value = value.strip()
+                            if 0 <= row_index < len(df):
+                                df.at[row_index, col] = value
+                                _append_trace(row_index, f"{col}={value}")
+                        except Exception as e:
+                            print(f"⚠️ Could not apply row-specific invalid value '{item}': {e}")
                     else:
                         # Replace the entire column with the invalid value
                         df[col] = val
-        # Save updated files
-        df.to_parquet(parquet_path, index=False)
-        excel_path = os.path.join(output_dir, output_filename + ".xlsx")
-        df.to_excel(excel_path, index=False)
-        csv_path = os.path.join(output_dir, output_filename + ".csv")
-        df.to_csv(csv_path, index=False)
-        print(f"✅ Injected invalid values {invalid_values} into {parquet_path}")
+                        for idx in range(len(df)):
+                            _append_trace(idx, f"{col}={val}")
+
+        # Keep per-row injection mapping in debug artifacts.
+        df[trace_column] = ["; ".join(parts) if parts else "" for parts in row_traces]
+        debug_parquet_path = os.path.join(output_dir, output_filename + "_debug.parquet")
+        debug_excel_path = os.path.join(output_dir, output_filename + "_debug.xlsx")
+        debug_csv_path = os.path.join(output_dir, output_filename + "_debug.csv")
+        df.to_parquet(debug_parquet_path, index=False)
+        df.to_excel(debug_excel_path, index=False)
+        df.to_csv(debug_csv_path, index=False)
+
+        # Upload file must stay schema-clean (no debug-only columns).
+        upload_df = df.drop(columns=[trace_column], errors="ignore")
+        upload_df.to_parquet(parquet_path, index=False)
+        print(f"✅ Injected invalid values {invalid_values} into debug artifacts: {debug_parquet_path}")
+        print(f"✅ Prepared upload parquet without '{trace_column}': {parquet_path}")
     except Exception as e:
         print(f"⚠️ Could not inject invalid values: {e}")
     upload_metadata = upload_to_s3(parquet_path)
