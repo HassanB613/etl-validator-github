@@ -3149,33 +3149,67 @@ def run_invalid_values_scenario(invalid_values, rows=50, formats=["csv"], seed=N
         df = pd.read_parquet(parquet_path)
         trace_column = "invalid_injection_trace"
         row_traces = [[] for _ in range(len(df))]
+        injection_failures = []
 
         def _append_trace(row_idx, text):
             if 0 <= row_idx < len(row_traces):
                 row_traces[row_idx].append(text)
+
+        def _stringify_existing_value(value):
+            if pd.isna(value):
+                return ""
+            isoformat = getattr(value, "isoformat", None)
+            if callable(isoformat):
+                try:
+                    return isoformat()
+                except Exception:
+                    pass
+            return str(value)
+
+        def _ensure_invalid_assignment_compatible(column_name):
+            series = df[column_name]
+            if pd.api.types.is_object_dtype(series) or pd.api.types.is_string_dtype(series):
+                return
+            df[column_name] = series.map(_stringify_existing_value)
 
         for item in invalid_values:
             if ":" in item:
                 col, val = item.split(":", 1)
                 col = col.strip()
                 val = val.strip()
-                if col in df.columns:
+                if col not in df.columns:
+                    message = f"Column '{col}' not found for invalid value '{item}'"
+                    injection_failures.append(message)
+                    print(f"⚠️ {message}")
+                    continue
+
+                try:
+                    _ensure_invalid_assignment_compatible(col)
+
                     # Check if specific rows are targeted (e.g., "ColumnName:row_index=value")
                     if "=" in val:
-                        try:
-                            row_index, value = val.split("=", 1)
-                            row_index = int(row_index.strip())
-                            value = value.strip()
-                            if 0 <= row_index < len(df):
-                                df.at[row_index, col] = value
-                                _append_trace(row_index, f"{col}={value}")
-                        except Exception as e:
-                            print(f"⚠️ Could not apply row-specific invalid value '{item}': {e}")
+                        row_index, value = val.split("=", 1)
+                        row_index = int(row_index.strip())
+                        value = value.strip()
+                        if 0 <= row_index < len(df):
+                            df.at[row_index, col] = value
+                            _append_trace(row_index, f"{col}={value}")
+                        else:
+                            message = (
+                                f"Row index {row_index} out of bounds for invalid value '{item}' "
+                                f"(rows={len(df)})"
+                            )
+                            injection_failures.append(message)
+                            print(f"⚠️ {message}")
                     else:
-                        # Replace the entire column with the invalid value
+                        # Replace the entire column with the invalid value.
                         df[col] = val
                         for idx in range(len(df)):
                             _append_trace(idx, f"{col}={val}")
+                except Exception as e:
+                    message = f"Could not apply invalid value '{item}': {e}"
+                    injection_failures.append(message)
+                    print(f"⚠️ {message}")
 
         # Keep per-row injection mapping in debug artifacts.
         df[trace_column] = ["; ".join(parts) if parts else "" for parts in row_traces]
@@ -3195,6 +3229,10 @@ def run_invalid_values_scenario(invalid_values, rows=50, formats=["csv"], seed=N
         upload_df.to_csv(upload_csv_path, index=False)
         print(f"✅ Injected invalid values {invalid_values} into debug artifacts: {debug_parquet_path}")
         print(f"✅ Prepared upload artifacts without '{trace_column}': {parquet_path}")
+        if injection_failures:
+            print(f"⚠️ Completed invalid-value injection with {len(injection_failures)} issue(s):")
+            for message in injection_failures:
+                print(f"   - {message}")
     except Exception as e:
         print(f"⚠️ Could not inject invalid values: {e}")
     upload_metadata = upload_to_s3(parquet_path)
