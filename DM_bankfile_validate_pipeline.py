@@ -1127,25 +1127,13 @@ def download_latest_error_csv_from_s3(local_evidence_dir):
         return None, 0
 
 
-def _is_stale_fallback_error_csv(modified_epoch, window_start_epoch, window_seconds, max_staleness_seconds=3600):
-    """
-    Guardrail for fallback selection: prevent using obviously stale CSV files
-    from previous runs when no in-window file is found.
-    """
-    if not window_start_epoch or modified_epoch is None:
-        return False
-
-    buffer_seconds = max(int(window_seconds or 0), 30)
-    stale_floor_epoch = max(window_start_epoch - buffer_seconds - int(max_staleness_seconds), 0)
-    return modified_epoch < stale_floor_epoch
-
 def download_latest_error_csv_in_window(local_evidence_dir, window_start_epoch=None, window_seconds=180):
     """
         Download the newest error CSV after a run start epoch.
 
         Match logic:
-            - Prefer the newest CSV with LastModified >= buffered window start
-            - If none match the buffered window, fall back to the newest CSV overall
+            - Use only CSV files with LastModified >= buffered window start
+            - If none match the buffered window, return no file and let caller retry
             - No upper time bound is enforced
 
     Returns (local_file_path, row_count) or (None, 0) if not found.
@@ -1181,26 +1169,9 @@ def download_latest_error_csv_in_window(local_evidence_dir, window_start_epoch=N
         if not matching_files:
             print(
                 "⚠️ No error CSV found in buffered run window. "
-                "Falling back to newest CSV in error folder."
+                "Not using out-of-window fallback to avoid stale prior-run files."
             )
-
-            csv_files.sort(key=lambda x: x["LastModified"], reverse=True)
-            newest_overall = csv_files[0]
-            newest_modified_epoch = None
-            try:
-                newest_modified_epoch = newest_overall["LastModified"].timestamp()
-            except Exception:
-                newest_modified_epoch = None
-
-            if _is_stale_fallback_error_csv(newest_modified_epoch, window_start_epoch, window_seconds):
-                print(
-                    "⚠️ Newest fallback CSV appears stale for this run "
-                    f"(key={newest_overall.get('Key')}, modified={newest_overall.get('LastModified')}). "
-                    "Ignoring fallback and waiting for a current-run error CSV."
-                )
-                return None, 0
-
-            return download_latest_error_csv_from_s3(local_evidence_dir)
+            return None, 0
 
         matching_files.sort(key=lambda x: x["LastModified"], reverse=True)
         target_file = matching_files[0]
