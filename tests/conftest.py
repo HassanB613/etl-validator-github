@@ -27,6 +27,9 @@ FOCUSED_TEST_NODEIDS = (
     "tests/test_chk_combined_special_chars_and_max_length.py::"
     "TestChkCombinedSpecialCharsAndMaxLength::"
     "test_chk_combined_special_chars_and_max_length",
+    "tests/test_chk_contact_fields_over_max_length_combined.py::"
+    "TestChkContactFieldsOverMaxLengthCombined::"
+    "test_chk_contact_fields_over_max_length_combined",
     "tests/test_accountnumber_blank_eft_required.py::"
     "TestAccountNumberBlankEFTRequired::"
     "test_accountnumber_blank_eft_required",
