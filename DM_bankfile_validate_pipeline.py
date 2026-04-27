@@ -3188,9 +3188,13 @@ def run_invalid_values_scenario(invalid_values, rows=50, formats=["csv"], seed=N
 
         # Upload file must stay schema-clean (no debug-only columns).
         upload_df = df.drop(columns=[trace_column], errors="ignore")
+        upload_excel_path = os.path.join(output_dir, output_filename + ".xlsx")
+        upload_csv_path = os.path.join(output_dir, output_filename + ".csv")
         upload_df.to_parquet(parquet_path, index=False)
+        upload_df.to_excel(upload_excel_path, index=False)
+        upload_df.to_csv(upload_csv_path, index=False)
         print(f"✅ Injected invalid values {invalid_values} into debug artifacts: {debug_parquet_path}")
-        print(f"✅ Prepared upload parquet without '{trace_column}': {parquet_path}")
+        print(f"✅ Prepared upload artifacts without '{trace_column}': {parquet_path}")
     except Exception as e:
         print(f"⚠️ Could not inject invalid values: {e}")
     upload_metadata = upload_to_s3(parquet_path)
