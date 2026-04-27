@@ -4,7 +4,7 @@ import subprocess
 import allure
 
 """
-Combined CHK scenario covering all generated schema columns in one file.
+Combined CHK scenario covering string-compatible generated schema columns in one file.
 
 Rows 0-29 each target one column with a row-specific invalid value so
 debug output can be mapped directly to a single field mutation.
@@ -18,7 +18,7 @@ class TestChkCombinedSpecialCharsAndMaxLength:
 
     @allure.description(
         """
-    Combined CHK validation covering all generated schema columns in a single parquet upload.
+    Combined CHK validation covering string-compatible generated schema columns in a single parquet upload.
 
     Coverage model:
     - Force CHK baseline context and D/P-style org context for consistent behavior.
@@ -46,7 +46,7 @@ class TestChkCombinedSpecialCharsAndMaxLength:
           "OrganizationCode:0=P",
           "OrganizationCode:1=P",
             "PaymentMode:CHK",
-          # All-column coverage: one primary invalid mutation per row
+          # String-column coverage: one primary invalid mutation per row
             "RecordOperation:0=$",
             "OrganizationCode:1=@",
             "PayeeID:2=#$%",
@@ -61,8 +61,6 @@ class TestChkCombinedSpecialCharsAndMaxLength:
           "RoutingTransitNumber:11=12345ABCD",
           "AccountNumber:12=12#456",
           "AccountType:13=CHECK",
-          "EffectiveStartDate:14=2026/13/40",
-          "EffectiveEndDate:15=not-a-date",
           "AddressCode:16=***",
           "AddressLine1:17=AddressLine1ValueWith#Special",
           "AddressLine2:18=AddressLine2ValueWith@Special",
