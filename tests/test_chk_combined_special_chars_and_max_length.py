@@ -4,16 +4,10 @@ import subprocess
 import allure
 
 """
-Combined CHK scenario — two test groups in one file:
+Combined CHK scenario covering all generated schema columns in one file.
 
-Group 1 (rows 0-9): Core org fields reject special characters
-  RecordOperation, OrganizationCode, PayeeID, OrganizationIdentifier,
-  OrganizationName, OrganizationLegalName, OrganizationTIN, OrganizationTINType,
-  ProfitNonprofit, OrganizationNPI
-
-Group 2 (rows 10-17): Contact fields over max length
-  ContactCode, ContactFirstName, ContactLastName, ContactTitle,
-  ContactPhone, ContactFax, ContactOtherPhone, ContactEmail
+Rows 0-29 each target one column with a row-specific invalid value so
+debug output can be mapped directly to a single field mutation.
 """
 
 
@@ -24,29 +18,12 @@ class TestChkCombinedSpecialCharsAndMaxLength:
 
     @allure.description(
         """
-    Combined CHK validation covering two scenario groups in a single parquet upload.
+    Combined CHK validation covering all generated schema columns in a single parquet upload.
 
-    Group 1 — Core org fields with special characters (rows 0-9):
-    - Row 0:  RecordOperation      = $
-    - Row 1:  OrganizationCode     = @
-    - Row 2:  PayeeID              = #$%
-    - Row 3:  OrganizationIdentifier = *&^
-    - Row 4:  OrganizationName     = Name!
-    - Row 5:  OrganizationLegalName = Legal@
-    - Row 6:  OrganizationTIN      = 12#456789
-    - Row 7:  OrganizationTINType  = @#$
-    - Row 8:  ProfitNonprofit      = %
-    - Row 9:  OrganizationNPI      = 12@3456789
-
-    Group 2 — Contact fields over max length (rows 10-17):
-    - Row 10: ContactCode          = CONTACT_CODE_TOO_LONG
-    - Row 11: ContactFirstName     = ContactFirstNameExceedingMaximumAllowedLengthValue
-    - Row 12: ContactLastName      = ContactLastNameExceedingMaximumAllowedLengthValue
-    - Row 13: ContactTitle         = ContactTitleExceedingMaximumAllowedLength
-    - Row 14: ContactPhone         = 12345678901234567890
-    - Row 15: ContactFax           = 12345678901234567890
-    - Row 16: ContactOtherPhone    = 12345678901234567890
-    - Row 17: ContactEmail         = verylongemailaddressthatexceedsmaximumlengthvalidationthresholdof100charactersexactly12345@example.com
+    Coverage model:
+    - Force CHK baseline context and D/P-style org context for consistent behavior.
+    - Inject one invalid value per row across rows 0-29 to isolate field failures.
+    - Preserve row-level traceability through debug artifacts.
 
     Implementation:
     - Force PaymentMode=CHK for all rows.
@@ -64,8 +41,12 @@ class TestChkCombinedSpecialCharsAndMaxLength:
             sys.executable,
             pipeline_path,
             "--invalid-values",
+          # Baseline deterministic context
+          "OrganizationCode:D",
+          "OrganizationCode:0=P",
+          "OrganizationCode:1=P",
             "PaymentMode:CHK",
-            # Group 1: special characters — rows 0-9
+          # All-column coverage: one primary invalid mutation per row
             "RecordOperation:0=$",
             "OrganizationCode:1=@",
             "PayeeID:2=#$%",
@@ -76,17 +57,28 @@ class TestChkCombinedSpecialCharsAndMaxLength:
             "OrganizationTINType:7=@#$",
             "ProfitNonprofit:8=%",
             "OrganizationNPI:9=12@3456789",
-            # Group 2: contact max length — rows 10-17
-            "ContactCode:10=CONTACT_CODE_TOO_LONG",
-            "ContactFirstName:11=ContactFirstNameExceedingMaximumAllowedLengthValue",
-            "ContactLastName:12=ContactLastNameExceedingMaximumAllowedLengthValue",
-            "ContactTitle:13=ContactTitleExceedingMaximumAllowedLength",
-            "ContactPhone:14=12345678901234567890",
-            "ContactFax:15=12345678901234567890",
-            "ContactOtherPhone:16=12345678901234567890",
-            "ContactEmail:17=verylongemailaddressthatexceedsmaximumlengthvalidationthresholdof100charactersexactly12345@example.com",
+          "PaymentMode:10=XYZ",
+          "RoutingTransitNumber:11=12345ABCD",
+          "AccountNumber:12=12#456",
+          "AccountType:13=CHECK",
+          "EffectiveStartDate:14=2026/13/40",
+          "EffectiveEndDate:15=not-a-date",
+          "AddressCode:16=***",
+          "AddressLine1:17=AddressLine1ValueWith#Special",
+          "AddressLine2:18=AddressLine2ValueWith@Special",
+          "CityName:19=City!",
+          "State:20=C1",
+          "PostalCode:21=12#45",
+          "ContactCode:22=CONTACT_CODE_TOO_LONG",
+          "ContactFirstName:23=ContactFirstNameExceedingMaximumAllowedLengthValue",
+          "ContactLastName:24=ContactLastNameExceedingMaximumAllowedLengthValue",
+          "ContactTitle:25=ContactTitleExceedingMaximumAllowedLength",
+          "ContactPhone:26=123ABC4567",
+          "ContactFax:27=123ABC4567",
+          "ContactOtherPhone:28=123ABC4567",
+          "ContactEmail:29=verylongemailaddressthatexceedsmaximumlengthvalidationthresholdof100charactersexactly12345@example.com",
             "--dev2",
-            "--rows", "20",
+          "--rows", "34",
             "--test-name", "test_chk_combined_special_chars_and_max_length",
         ]
 
