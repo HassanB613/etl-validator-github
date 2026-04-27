@@ -2208,7 +2208,9 @@ def run_test_scenario(file_type, seed=None, rows=50):
             else:
                 test_output_dir = os.path.dirname(file_path) if file_path else "./test_output"
                 evidence_dir = os.path.join(test_output_dir, "test evidence s3 ready folder")
-                validation_window_start_epoch = upload_metadata.get("upload_started_epoch") or ready_folder_empty_epoch
+                # Anchor on ready_folder_empty_epoch (Glue finished) so prior-run error CSVs
+                # created just before the upload do not fall inside the buffered window.
+                validation_window_start_epoch = ready_folder_empty_epoch or upload_metadata.get("upload_started_epoch")
                 db_validation_passed, db_details = validate_error_file_with_database(
                     glue_run_id,
                     evidence_dir,
@@ -2257,7 +2259,7 @@ def run_test_scenario(file_type, seed=None, rows=50):
             archive_found, archive_downloaded = download_specific_archive_file(archive_prefix, timestamp, evidence_dir)
             
             # Download newest error file after this run started (same selection logic as Step 8)
-            evidence_window_start_epoch = upload_metadata.get("upload_started_epoch") or ready_folder_empty_epoch
+            evidence_window_start_epoch = ready_folder_empty_epoch or upload_metadata.get("upload_started_epoch")
             error_files = download_specific_error_file(
                 ERROR_CSV_PREFIX,
                 evidence_dir,
@@ -2982,7 +2984,9 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
         elif glue_run_id:
             test_output_dir = os.path.dirname(file_path) if file_path else "./test_output"
             evidence_dir = os.path.join(test_output_dir, "test evidence s3 ready folder")
-            validation_window_start_epoch = (upload_metadata or {}).get("upload_started_epoch") or ready_folder_empty_epoch
+            # Anchor on ready_folder_empty_epoch (Glue finished) so prior-run error CSVs
+            # created just before the upload do not fall inside the buffered window.
+            validation_window_start_epoch = ready_folder_empty_epoch or (upload_metadata or {}).get("upload_started_epoch")
             db_validation_passed, db_details = validate_error_file_with_database(
                 glue_run_id,
                 evidence_dir,
@@ -3022,7 +3026,7 @@ def run_full_etl_pipeline_with_existing_file(file_path, scenario_name, timestamp
             archive_found, archive_downloaded = download_specific_archive_file(archive_prefix, timestamp, evidence_dir)
             
             # Download newest error file after this run started (same selection logic as Step 7)
-            evidence_window_start_epoch = (upload_metadata or {}).get("upload_started_epoch") or ready_folder_empty_epoch
+            evidence_window_start_epoch = ready_folder_empty_epoch or (upload_metadata or {}).get("upload_started_epoch")
             error_files = download_specific_error_file(
                 ERROR_CSV_PREFIX,
                 evidence_dir,
