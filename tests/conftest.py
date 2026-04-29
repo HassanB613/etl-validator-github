@@ -30,9 +30,9 @@ FOCUSED_TEST_NODEIDS = (
     "tests/test_chk_contact_fields_over_max_length_combined.py::"
     "TestChkContactFieldsOverMaxLengthCombined::"
     "test_chk_contact_fields_over_max_length_combined",
-    "tests/test_accountnumber_chk_should_be_blank.py::"
-    "TestAccountNumberChkShouldBeBlank::"
-    "test_accountnumber_chk_should_be_blank",
+    "tests/test_chk_banking_fields_should_be_blank_combined.py::"
+    "TestChkBankingFieldsShouldBeBlankCombined::"
+    "test_chk_banking_fields_should_be_blank_combined",
     "tests/test_accountnumber_blank_eft_required.py::"
     "TestAccountNumberBlankEFTRequired::"
     "test_accountnumber_blank_eft_required",
