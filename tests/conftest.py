@@ -33,6 +33,9 @@ FOCUSED_TEST_NODEIDS = (
     "tests/test_chk_banking_fields_should_be_blank_combined.py::"
     "TestChkBankingFieldsShouldBeBlankCombined::"
     "test_chk_banking_fields_should_be_blank_combined",
+    "tests/test_addresscode_paymentmode_rules_dp_combined.py::"
+    "TestAddressCodePaymentModeRulesDpCombined::"
+    "test_addresscode_paymentmode_rules_dp_combined",
     "tests/test_accountnumber_blank_eft_required.py::"
     "TestAccountNumberBlankEFTRequired::"
     "test_accountnumber_blank_eft_required",
