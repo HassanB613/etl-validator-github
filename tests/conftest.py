@@ -39,9 +39,9 @@ FOCUSED_TEST_NODEIDS = (
     "tests/test_addresscode_paymentmode_rules_dp_combined.py::"
     "TestAddressCodePaymentModeRulesDpCombined::"
     "test_addresscode_paymentmode_rules_dp_combined",
-    "tests/test_accountnumber_blank_eft_required.py::"
-    "TestAccountNumberBlankEFTRequired::"
-    "test_accountnumber_blank_eft_required",
+    "tests/test_eft_banking_fields_blank_required_combined.py::"
+    "TestEftBankingFieldsBlankRequiredCombined::"
+    "test_eft_banking_fields_blank_required_combined",
 )
 
 
