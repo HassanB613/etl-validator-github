@@ -42,6 +42,9 @@ FOCUSED_TEST_NODEIDS = (
     "tests/test_eft_banking_fields_blank_required_combined.py::"
     "TestEftBankingFieldsBlankRequiredCombined::"
     "test_eft_banking_fields_blank_required_combined",
+    "tests/test_eft_banking_format_rules_combined.py::"
+    "TestEftBankingFormatRulesCombined::"
+    "test_eft_banking_format_rules_combined",
 )
 
 
