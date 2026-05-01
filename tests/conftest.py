@@ -45,6 +45,30 @@ FOCUSED_TEST_NODEIDS = (
     "tests/test_eft_banking_format_rules_combined.py::"
     "TestEftBankingFormatRulesCombined::"
     "test_eft_banking_format_rules_combined",
+    "tests/test_accounttype_value_rules_eft_combined.py::"
+    "TestAccountTypeValueRulesEftCombined::"
+    "test_accounttype_value_rules_eft_combined",
+    "tests/test_paymentmode_requiredness_rules_dp_combined.py::"
+    "TestPaymentModeRequirednessRulesDpCombined::"
+    "test_paymentmode_requiredness_rules_dp_combined",
+    "tests/test_organizationnpi_value_rules_combined.py::"
+    "TestOrganizationNpiValueRulesCombined::"
+    "test_organizationnpi_value_rules_combined",
+    "tests/test_banking_extras_format_validation_combined.py::"
+    "TestBankingExtrasFormatValidationCombined::"
+    "test_banking_extras_format_validation",
+    "tests/test_address_location_formatting_rules_combined.py::"
+    "TestAddressLocationFormattingRulesCombined::"
+    "test_address_location_formatting_rules",
+    "tests/test_organization_tin_profit_rules_combined.py::"
+    "TestOrganizationTinProfitRulesCombined::"
+    "test_organization_tin_profit_rules",
+    "tests/test_contact_required_format_rules_combined.py::"
+    "TestContactRequiredFormatRulesCombined::"
+    "test_contact_required_format_rules",
+    "tests/test_paymentmode_recordoperation_enum_rules_combined.py::"
+    "TestPaymentModeRecordOperationEnumRulesCombined::"
+    "test_paymentmode_recordoperation_enum_rules",
 )
 
 
